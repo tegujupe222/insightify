@@ -7,7 +7,7 @@ export class ProjectController {
     try {
       const projectData: ProjectCreateInput = {
         ...req.body,
-        userId: req.user!.userId
+        userId: (req.user as any)!.id
       };
 
       // Validate domains if provided
@@ -43,10 +43,10 @@ export class ProjectController {
       const limitNum = parseInt(limit as string);
 
       let projects;
-      if (req.user!.role === 'admin') {
+      if ((req.user as any)!.role === 'admin') {
         projects = await ProjectModel.findAll();
       } else {
-        projects = await ProjectModel.findByUserId(req.user!.userId);
+        projects = await ProjectModel.findByUserId((req.user as any)!.id);
       }
 
       // Simple pagination
@@ -90,7 +90,7 @@ export class ProjectController {
       }
 
       // Check if user has access to this project
-      if (req.user!.role !== 'admin' && project.userId !== req.user!.userId) {
+      if ((req.user as any)!.role !== 'admin' && project.userId !== (req.user as any)!.id) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -126,7 +126,7 @@ export class ProjectController {
       }
 
       // Check if user has access to this project
-      if (req.user!.role !== 'admin' && project.userId !== req.user!.userId) {
+      if ((req.user as any)!.role !== 'admin' && project.userId !== (req.user as any)!.id) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -170,7 +170,7 @@ export class ProjectController {
       }
 
       // Check if user has access to this project
-      if (req.user!.role !== 'admin' && project.userId !== req.user!.userId) {
+      if ((req.user as any)!.role !== 'admin' && project.userId !== (req.user as any)!.id) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -213,7 +213,7 @@ export class ProjectController {
       }
 
       // Check if user has access to this project
-      if (req.user!.role !== 'admin' && project.userId !== req.user!.userId) {
+      if ((req.user as any)!.role !== 'admin' && project.userId !== (req.user as any)!.id) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -257,7 +257,7 @@ export class ProjectController {
       }
 
       // Check if user has access to this project
-      if (req.user!.role !== 'admin' && project.userId !== req.user!.userId) {
+      if ((req.user as any)!.role !== 'admin' && project.userId !== (req.user as any)!.id) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'

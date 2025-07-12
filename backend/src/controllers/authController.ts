@@ -117,7 +117,7 @@ export class AuthController {
 
   static async me(req: Request, res: Response) {
     try {
-      const user = await UserModel.findById(req.user!.userId);
+      const user = await UserModel.findById((req.user as any)!.id);
       if (!user) {
         return res.status(404).json({
           success: false,

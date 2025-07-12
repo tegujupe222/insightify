@@ -1,6 +1,7 @@
 // User related types
 export interface User {
   id: string;
+  userId?: string; // 後方互換性のため
   email: string;
   password: string;
   role: 'admin' | 'user';

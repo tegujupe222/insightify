@@ -1,6 +1,48 @@
 import React from 'react';
 
-export type IconName = 'logo' | 'eye' | 'users' | 'trendingDown' | 'trendingUp' | 'bell' | 'loader' | 'logout' | 'google' | 'plus' | 'copy' | 'arrowLeft' | 'close' | 'globe' | 'xMark' | 'shield' | 'trash' | 'dashboard' | 'folder' | 'barChart' | 'activity' | 'map' | 'fileText' | 'sun' | 'moon' | 'settings' | 'monitor' | 'menu' | 'x' | 'check' | 'credit-card' | 'mail' | 'alert-triangle' | 'alert-circle' | 'bank' | 'info' | 'arrow-up' | 'check-circle' | 'clock' | 'refresh' | 'home';
+export type IconName =
+  | 'logo'
+  | 'google'
+  | 'loader'
+  | 'alert-triangle'
+  | 'refresh'
+  | 'arrowLeft'
+  | 'globe'
+  | 'eye'
+  | 'users'
+  | 'trendingDown'
+  | 'download'
+  | 'fileText'
+  | 'alert-circle'
+  | 'trendingUp'
+  | 'bell'
+  | 'copy'
+  | 'check'
+  | 'mail'
+  | 'monitor'
+  | 'menu'
+  | 'x'
+  | 'plus'
+  | 'shield'
+  | 'info'
+  | 'arrow-up'
+  | 'check-circle'
+  | 'trash'
+  | 'barChart'
+  | 'home'
+  | 'xMark'
+  | 'credit-card'
+  | 'logout'
+  | 'map'
+  | 'activity'
+  | 'sun'
+  | 'moon'
+  | 'settings'
+  | 'close'
+  | 'bank'
+  | 'clock'
+  | 'dashboard'
+  | 'folder';
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
   name: IconName;
@@ -216,6 +258,11 @@ const ICONS: Record<IconName, React.ReactNode> = {
     home: (
         <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+        </svg>
+    ),
+    download: (
+        <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
         </svg>
     ),
 };

@@ -8,7 +8,7 @@ import { getBankTransferInfo } from '../config/bankInfo';
 
 export class SubscriptionController {
   // Get subscription pricing
-  static async getPricing(req: Request, res: Response) {
+  static async getPricing(_req: Request, res: Response) {
     try {
       const pricing = getSubscriptionPricing();
       
@@ -32,7 +32,7 @@ export class SubscriptionController {
   static async requestUpgrade(req: Request, res: Response) {
     try {
       const { planType } = req.body;
-      const userId = req.user!.userId;
+      const userId = (req.user as any)!.id;
 
       if (!planType || !['monthly', 'yearly'].includes(planType)) {
         return res.status(400).json({
@@ -62,7 +62,7 @@ export class SubscriptionController {
         userId,
         type: 'subscription_requested',
         subject: template.subject,
-        content: template.content(req.user!.email, planType, amount, subscription.invoiceNumber)
+        content: template.content((req.user as any)!.email, planType, amount, subscription.invoiceNumber)
       });
 
       const response: ApiResponse = {
@@ -90,7 +90,7 @@ export class SubscriptionController {
   }
 
   // Get bank transfer information
-  static async getBankTransferInfo(req: Request, res: Response) {
+  static async getBankTransferInfo(_req: Request, res: Response) {
     try {
       const bankInfo = getBankTransferInfo();
       
@@ -113,7 +113,7 @@ export class SubscriptionController {
   // Get user's subscription status
   static async getUserSubscription(req: Request, res: Response) {
     try {
-      const userId = req.user!.userId;
+      const userId = (req.user as any)!.id;
       const user = await UserModel.findById(userId);
       
       if (!user) {
@@ -151,7 +151,7 @@ export class SubscriptionController {
   }
 
   // Admin: Get all pending subscriptions
-  static async getPendingSubscriptions(req: Request, res: Response) {
+  static async getPendingSubscriptions(_req: Request, res: Response) {
     try {
       const subscriptions = await SubscriptionModel.findPendingSubscriptions();
       
@@ -190,7 +190,7 @@ export class SubscriptionController {
   static async confirmPayment(req: Request, res: Response) {
     try {
       const { subscriptionId } = req.params;
-      const adminUserId = req.user!.userId;
+      const adminUserId = (req.user as any)!.id;
 
       const subscription = await SubscriptionModel.findById(subscriptionId);
       if (!subscription) {
@@ -221,7 +221,7 @@ export class SubscriptionController {
         userId: subscription.userId,
         type: 'payment_confirmed',
         subject: template.subject,
-        content: template.content(subscription.userId, subscription.planType)
+        content: template.content((req.user as any)!.email, subscription.planType)
       });
 
       // Send activation email
@@ -230,19 +230,12 @@ export class SubscriptionController {
         userId: subscription.userId,
         type: 'subscription_activated',
         subject: activationTemplate.subject,
-        content: activationTemplate.content(subscription.userId)
+        content: activationTemplate.content((req.user as any)!.email)
       });
 
       const response: ApiResponse = {
         success: true,
-        data: {
-          subscription: {
-            id: subscription.id,
-            status: 'paid',
-            paymentConfirmedAt: new Date()
-          }
-        },
-        message: 'Payment confirmed successfully'
+        message: 'Payment confirmed and subscription activated'
       };
 
       res.json(response);

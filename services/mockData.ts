@@ -1,4 +1,4 @@
-import type { AnalyticsData, DailyStat, Source, DeviceData, User } from '../types';
+import type { AnalyticsData, DailyStat, User } from '../types';
 
 const generateVisitorData = (): DailyStat[] => {
   const data: DailyStat[] = [];

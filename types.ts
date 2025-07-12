@@ -44,10 +44,15 @@ export interface Project {
 export type UserRole = 'admin' | 'user';
 
 export interface AuthUser {
+  id: string;
   email: string;
   role: UserRole;
   token?: string;
   name?: string;
+  subscriptionStatus: 'free' | 'premium' | 'pending';
+  subscriptionPlan?: 'monthly' | 'yearly';
+  monthlyPageViews: number;
+  pageViewsLimit: number;
 }
 
 export interface User {

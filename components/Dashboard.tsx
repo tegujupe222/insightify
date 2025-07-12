@@ -16,7 +16,7 @@ import { HeatmapPage } from './HeatmapPage';
 
 interface DashboardProps {
     onLogout: () => void;
-    project: Project;
+    project?: Project | null;
     onBackToProjects: () => void;
     user: AuthUser;
 }
@@ -72,7 +72,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
         <div className="flex items-center space-x-3">
           <Icon name="loader" className="h-8 w-8 text-indigo-400" />
           <span className={`text-xl font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-            {t('common.loading')} {project.name}...
+            {t('common.loading')} {project?.name || 'Dashboard'}...
           </span>
         </div>
       </div>
@@ -99,13 +99,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
                 <Icon name="arrowLeft" className="h-4 w-4 mr-2" />
                 {t('common.back')} {t('navigation.projects')}
             </button>
-            <h1 className={`text-3xl font-bold mt-2 truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{project.name}</h1>
-            <a href={project.url} target="_blank" rel="noopener noreferrer" className={`flex items-center mt-1 text-sm transition-colors duration-150 ${
-              isDark ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-500'
-            }`}>
-                <Icon name="globe" className="h-4 w-4 mr-1.5" />
-                {project.url}
-            </a>
+            <h1 className={`text-3xl font-bold mt-2 truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{project?.name || 'Dashboard'}</h1>
+            {project?.url && (
+              <a href={project.url} target="_blank" rel="noopener noreferrer" className={`flex items-center mt-1 text-sm transition-colors duration-150 ${
+                isDark ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-500'
+              }`}>
+                  <Icon name="globe" className="h-4 w-4 mr-1.5" />
+                  {project.url}
+              </a>
+            )}
         </div>
 
         {/* Subscription Status */}
@@ -130,13 +132,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
           <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             {t('realtime.title')} {t('analytics.title')}
           </h2>
-          <RealtimeDashboard projectId={project.id} token={user.token || ''} />
+          <RealtimeDashboard projectId={project?.id || 'default'} token={user.token || ''} />
         </div>
 
         {/* Heatmap Analysis */}
         {currentPage === 'heatmap' && (
           <div className="mb-6">
-            <HeatmapPage projectId={project.id} />
+            <HeatmapPage projectId={project?.id || 'default'} />
           </div>
         )}
         {currentPage === 'dashboard' && (

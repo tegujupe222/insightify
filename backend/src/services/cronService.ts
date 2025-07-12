@@ -70,7 +70,7 @@ export class CronService {
 
         if (!hasRecentRecommendation) {
           // Create notification record
-          const notification = await EmailNotificationModel.create({
+          await EmailNotificationModel.create({
             userId: user.id,
             type: 'upgrade_recommended',
             subject: template.subject,
@@ -117,7 +117,7 @@ export class CronService {
 
         if (!hasRecentWarning) {
           // Create notification record
-          const notification = await EmailNotificationModel.create({
+          await EmailNotificationModel.create({
             userId: user.id,
             type: 'limit_warning',
             subject: template.subject,

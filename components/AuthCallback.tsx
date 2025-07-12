@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import type { AuthUser } from '../types';
 
 interface AuthCallbackProps {
@@ -14,8 +14,14 @@ export const AuthCallback: React.FC<AuthCallbackProps> = ({ onLoginSuccess }) =>
       try {
         const decoded: any = jwtDecode(token);
         const user: AuthUser = {
+          id: decoded.sub || '',
           email: decoded.email,
-          role: decoded.role,
+          role: decoded.role || 'user',
+          name: decoded.name || '',
+          token: token,
+          subscriptionStatus: decoded.subscriptionStatus || 'free',
+          monthlyPageViews: decoded.monthlyPageViews || 0,
+          pageViewsLimit: decoded.pageViewsLimit || 3000
         };
         // トークンをlocalStorage等に保存（必要なら）
         localStorage.setItem('jwt', token);

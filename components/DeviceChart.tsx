@@ -9,14 +9,13 @@ interface DeviceChartProps {
 
 const COLORS = ['#6366f1', '#a78bfa', '#f472b6']; // Indigo, Violet, Pink
 
-const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = <T extends { cx: number, cy: number, midAngle: number, innerRadius: number, outerRadius: number, percent: number }>({ cx, cy, midAngle, innerRadius, outerRadius, percent }: T) => {
+const renderCustomizedLabel = (props: any) => {
+  const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0 } = props;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
+  const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+  const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
   return (
-    <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="font-bold">
+    <text x={x} y={y} fill="#fff" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
       {`${(percent * 100).toFixed(0)}%`}
     </text>
   );
@@ -55,7 +54,7 @@ export const DeviceChart: React.FC<DeviceChartProps> = ({ data }) => {
             dataKey="value"
             stroke="none"
           >
-            {data.map((entry, index) => (
+            {data.map((_, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>

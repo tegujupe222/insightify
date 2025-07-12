@@ -43,12 +43,10 @@ export interface Event {
 
 class WebSocketService {
   private socket: Socket | null = null;
-  private token: string | null = null;
   private projectId: string | null = null;
   private listeners: Map<string, Set<Function>> = new Map();
 
   connect(token: string, projectId?: string) {
-    this.token = token;
     this.projectId = projectId || null;
 
     const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -116,7 +114,6 @@ class WebSocketService {
       this.socket.disconnect();
       this.socket = null;
     }
-    this.token = null;
     this.projectId = null;
     this.listeners.clear();
   }

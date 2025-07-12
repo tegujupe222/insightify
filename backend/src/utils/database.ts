@@ -1,5 +1,28 @@
 import pool from '../config/database';
 
+export const connectDatabase = async (): Promise<void> => {
+  try {
+    // データベース接続テスト
+    const client = await pool.connect();
+    await client.query('SELECT NOW()');
+    client.release();
+    console.log('✅ Database connection successful');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    throw error;
+  }
+};
+
+export const closeDatabase = async (): Promise<void> => {
+  try {
+    await pool.end();
+    console.log('✅ Database connection closed');
+  } catch (error) {
+    console.error('❌ Error closing database connection:', error);
+    throw error;
+  }
+};
+
 export const initializeDatabase = async () => {
   try {
     console.log('🔄 Initializing database...');
@@ -190,7 +213,7 @@ export const initializeDatabase = async () => {
 export const createDefaultAdmin = async () => {
   try {
     const { UserModel } = await import('../models/User');
-    const { isAdminEmail } = await import('./adminUtils');
+    const { isAdminEmail: _isAdminEmail } = await import('./adminUtils');
     
     // Create admin users for allowed emails
     const adminEmails = ['g-igasaki@shinko.ed.jp', 'igafactory2023@gmail.com'];

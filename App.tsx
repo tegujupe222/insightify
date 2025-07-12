@@ -6,19 +6,10 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider, useToast } from './components/Toast';
 import { SkipLink, LoadingAnnouncer, ErrorAnnouncer } from './components/Accessibility';
 import { Icon } from './components/Icon';
-
-interface User {
-  id: string;
-  email: string;
-  role: 'admin' | 'user';
-  subscriptionStatus: 'free' | 'premium' | 'pending';
-  subscriptionPlan?: 'monthly' | 'yearly';
-  monthlyPageViews: number;
-  pageViewsLimit: number;
-}
+import type { AuthUser } from './types';
 
 const AppContent: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useToast();
@@ -76,7 +67,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleLogin = async (userData: User) => {
+  const handleLogin = async (userData: AuthUser) => {
     setUser(userData);
     showToast({
       type: 'success',
@@ -152,7 +143,7 @@ const AppContent: React.FC = () => {
           <Dashboard 
             user={user} 
             onLogout={handleLogout}
-            project={null}
+            project={null as any}
             onBackToProjects={() => {}}
           />
         )}

@@ -5,7 +5,7 @@ import { ApiResponse } from '../types';
 const router = express.Router();
 
 // Daily tasks
-router.post('/daily', async (req, res) => {
+router.post('/daily', async (_req, res) => {
   try {
     await CronService.runDailyTasks();
     
@@ -25,7 +25,7 @@ router.post('/daily', async (req, res) => {
 });
 
 // Monthly tasks
-router.post('/monthly', async (req, res) => {
+router.post('/monthly', async (_req, res) => {
   try {
     await CronService.runMonthlyTasks();
     
@@ -45,7 +45,7 @@ router.post('/monthly', async (req, res) => {
 });
 
 // Reset monthly page views
-router.post('/reset-page-views', async (req, res) => {
+router.post('/reset-page-views', async (_req, res) => {
   try {
     await CronService.resetMonthlyPageViews();
     
@@ -65,7 +65,7 @@ router.post('/reset-page-views', async (req, res) => {
 });
 
 // Handle expired subscriptions
-router.post('/handle-expired-subscriptions', async (req, res) => {
+router.post('/handle-expired-subscriptions', async (_req, res) => {
   try {
     await CronService.handleExpiredSubscriptions();
     
@@ -85,7 +85,7 @@ router.post('/handle-expired-subscriptions', async (req, res) => {
 });
 
 // Send upgrade recommendations
-router.post('/send-upgrade-recommendations', async (req, res) => {
+router.post('/send-upgrade-recommendations', async (_req, res) => {
   try {
     await CronService.sendUpgradeRecommendations();
     
@@ -105,7 +105,7 @@ router.post('/send-upgrade-recommendations', async (req, res) => {
 });
 
 // Send limit warnings
-router.post('/send-limit-warnings', async (req, res) => {
+router.post('/send-limit-warnings', async (_req, res) => {
   try {
     await CronService.sendLimitWarnings();
     
@@ -146,7 +146,7 @@ router.post('/clean-notifications', async (req, res) => {
 });
 
 // Generate monthly reports
-router.post('/generate-monthly-reports', async (req, res) => {
+router.post('/generate-monthly-reports', async (_req, res) => {
   try {
     await CronService.generateMonthlyReports();
     

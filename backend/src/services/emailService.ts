@@ -1,6 +1,5 @@
 import sgMail from '@sendgrid/mail';
 import { EmailNotification } from '../types';
-import { getBankTransferText } from '../config/bankInfo';
 
 // Initialize SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
@@ -493,7 +492,6 @@ export class EmailService {
   }
 
   private static getBankTransferHtml(): string {
-    const bankInfo = getBankTransferText();
     return `
       <div class="bank-detail">
         <span class="bank-label">銀行名:</span>

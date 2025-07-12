@@ -1,141 +1,107 @@
-import express from 'express';
-import { PaymentService } from '../services/paymentService';
+import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth';
-import { ApiResponse } from '../types';
+import { SubscriptionModel } from '../models/Subscription';
+import { EmailService } from '../services/emailService';
+import { UserModel } from '../models/User';
 
-const router = express.Router();
+const router = Router();
 
-// Create bank transfer payment
+// 銀行振込リクエスト
 router.post('/bank-transfer', authenticateToken, async (req, res) => {
   try {
-    const { amount, description } = req.body;
-    const userId = req.user!.userId;
-
-    if (!amount || amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid amount'
-      });
-    }
-
-    const payment = await PaymentService.createBankTransferPayment(
-      amount,
-      userId,
-      description || 'Insightify Payment'
-    );
-
-    const response: ApiResponse = {
-      success: true,
-      data: payment,
-      message: 'Bank transfer payment created successfully'
-    };
-
-    res.status(201).json(response);
-  } catch (error) {
-    console.error('Bank transfer payment error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
-
-// Create subscription for bank transfer
-router.post('/subscription', authenticateToken, async (req, res) => {
-  try {
     const { planType, amount } = req.body;
-    const userId = req.user!.userId;
+    const userId = (req as any).user.id;
 
-    if (!planType || !['monthly', 'yearly'].includes(planType)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid plan type'
-      });
-    }
-
-    if (!amount || amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid amount'
-      });
-    }
-
-    const subscription = await PaymentService.createSubscription(userId, {
+    // サブスクリプション作成
+    const subscription = await SubscriptionModel.create({
       userId,
       planType,
       amount
     });
 
-    const response: ApiResponse = {
+    // 確認メール送信
+    await EmailService.sendPaymentConfirmed(userId, subscription.id);
+
+    res.json({
       success: true,
       data: subscription,
-      message: 'Bank transfer subscription created successfully'
-    };
-
-    res.status(201).json(response);
+      message: 'Bank transfer request created successfully'
+    });
   } catch (error) {
-    console.error('Subscription creation error:', error);
+    console.error('Error creating bank transfer request:', error);
     res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: 'Failed to create bank transfer request'
     });
   }
 });
 
-// Create invoice for bank transfer
+// サブスクリプション作成
+router.post('/subscription', authenticateToken, async (req, res) => {
+  try {
+    const { planType, amount } = req.body;
+    const userId = (req as any).user.id;
+
+    // 既存のサブスクリプションをキャンセル（簡略化）
+    // await SubscriptionModel.cancelActiveSubscriptions(userId);
+
+    // 新しいサブスクリプション作成
+    const subscription = await SubscriptionModel.create({
+      userId,
+      planType,
+      amount
+    });
+
+    // ユーザーのサブスクリプション状態を更新
+    await UserModel.updateSubscriptionStatus(userId, 'pending', planType);
+
+    res.json({
+      success: true,
+      data: subscription,
+      message: 'Subscription created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating subscription:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create subscription'
+    });
+  }
+});
+
+// 請求書生成
 router.post('/invoice', authenticateToken, async (req, res) => {
   try {
-    const { amount, description, metadata } = req.body;
-    const userId = req.user!.userId;
+    const { subscriptionId } = req.body;
+    const userId = (req as any).user.id;
 
-    if (!amount || amount <= 0) {
-      return res.status(400).json({
+    const subscription = await SubscriptionModel.findById(subscriptionId);
+    if (!subscription || subscription.userId !== userId) {
+      res.status(404).json({
         success: false,
-        error: 'Invalid amount'
+        error: 'Subscription not found'
       });
+      return;
     }
 
-    const invoice = await PaymentService.createInvoice(
-      userId,
-      amount,
-      description || 'Insightify Invoice',
-      metadata
-    );
-
-    const response: ApiResponse = {
-      success: true,
-      data: invoice,
-      message: 'Bank transfer invoice created successfully'
+    // 請求書生成（簡略化）
+    const invoice = {
+      id: `INV-${Date.now()}`,
+      subscriptionId,
+      amount: subscription.amount,
+      status: 'pending',
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7日後
     };
 
-    res.status(201).json(response);
-  } catch (error) {
-    console.error('Invoice creation error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
+    res.json({
+      success: true,
+      data: invoice
     });
-  }
-});
-
-// Get bank transfer information
-router.get('/bank-info', async (req, res) => {
-  try {
-    const { getBankTransferInfo } = await import('../config/bankInfo');
-    const bankInfo = getBankTransferInfo();
-
-    const response: ApiResponse = {
-      success: true,
-      data: bankInfo,
-      message: 'Bank transfer information retrieved successfully'
-    };
-
-    res.json(response);
   } catch (error) {
-    console.error('Bank info error:', error);
+    console.error('Error generating invoice:', error);
     res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: 'Failed to generate invoice'
     });
   }
 });

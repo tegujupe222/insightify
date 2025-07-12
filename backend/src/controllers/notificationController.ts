@@ -39,7 +39,7 @@ export class NotificationController {
   }
 
   // Get notification statistics
-  static async getNotificationStats(req: Request, res: Response) {
+  static async getNotificationStats(_req: Request, res: Response) {
     try {
       const stats = await EmailNotificationModel.getStats();
 
@@ -85,7 +85,7 @@ export class NotificationController {
   }
 
   // Retry failed notifications
-  static async retryFailedNotifications(req: Request, res: Response) {
+  static async retryFailedNotifications(_req: Request, res: Response) {
     try {
       const results = await EmailNotificationModel.retryFailedNotifications();
 
@@ -213,7 +213,7 @@ export class NotificationController {
   }
 
   // Admin: Send upgrade recommendation to users near limit
-  static async sendUpgradeRecommendations(req: Request, res: Response) {
+  static async sendUpgradeRecommendations(_req: Request, res: Response) {
     try {
       const usersNearLimit = await UserModel.getUsersNearLimit(0.8);
       const templates = getEmailTemplates();
@@ -274,7 +274,7 @@ export class NotificationController {
   }
 
   // Admin: Send limit warnings to users at limit
-  static async sendLimitWarnings(req: Request, res: Response) {
+  static async sendLimitWarnings(_req: Request, res: Response) {
     try {
       const usersAtLimit = await UserModel.getUsersAtLimit();
       const templates = getEmailTemplates();

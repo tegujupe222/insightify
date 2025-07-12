@@ -101,22 +101,25 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
       {/* Live Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
-          title="Live Visitors"
+          title="Visitors"
           value={liveVisitors.length.toString()}
+          change=""
           icon="👥"
           trend="+2"
           trendDirection="up"
         />
         <StatCard
-          title="Page Views (30m)"
+          title="Page Views"
           value={recentPageViews.length.toString()}
+          change=""
           icon="📄"
           trend="+5"
           trendDirection="up"
         />
         <StatCard
-          title="Events (30m)"
+          title="Goals"
           value={recentEvents.length.toString()}
+          change=""
           icon="🎯"
           trend="+3"
           trendDirection="up"
@@ -160,7 +163,7 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
         {/* Recent Page Views */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <Icon name="file-text" className="w-5 h-5 mr-2" />
+            <Icon name="fileText" className="w-5 h-5 mr-2" />
             Recent Page Views
           </h3>
           <div className="space-y-3">

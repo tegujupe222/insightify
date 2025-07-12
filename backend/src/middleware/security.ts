@@ -1,291 +1,264 @@
 import { Request, Response, NextFunction } from 'express';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import cors from 'cors';
 import { body, validationResult } from 'express-validator';
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 
-// Rate limiting configuration
-export const createRateLimiter = (windowMs: number, max: number) => {
-  const requests = new Map<string, { count: number; resetTime: number }>();
-  
-  return (req: Request, res: Response, next: NextFunction) => {
-    const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    const now = Date.now();
-    
-    const userRequests = requests.get(ip);
-    
-    if (!userRequests || now > userRequests.resetTime) {
-      requests.set(ip, { count: 1, resetTime: now + windowMs });
-      return next();
-    }
-    
-    if (userRequests.count >= max) {
-      return res.status(429).json({
+// レート制限の設定
+export const createRateLimit = (windowMs: number, max: number, message?: string) => {
+  return rateLimit({
+    windowMs,
+    max,
+    message: {
+      error: message || 'Too many requests from this IP, please try again later.',
+      retryAfter: Math.ceil(windowMs / 1000)
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req: Request, res: Response) => {
+      res.status(429).json({
         success: false,
-        error: 'Too many requests, please try again later'
+        error: 'Rate limit exceeded',
+        retryAfter: Math.ceil(windowMs / 1000)
       });
     }
+  });
+};
+
+// 一般的なAPIレート制限
+export const apiLimiter = createRateLimit(15 * 60 * 1000, 100, 'API rate limit exceeded');
+
+// 認証エンドポイント用の厳しいレート制限
+export const authLimiter = createRateLimit(15 * 60 * 1000, 5, 'Too many authentication attempts');
+
+// トラッキングエンドポイント用の緩いレート制限
+export const trackingLimiter = createRateLimit(60 * 1000, 1000, 'Too many tracking requests');
+
+// セキュリティヘッダーの設定
+export const securityHeaders = helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.openai.com"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+});
+
+// CORS設定
+export const corsOptions = {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://insightify.vercel.app',
+      'https://insightify.com'
+    ];
     
-    userRequests.count++;
-    next();
-  };
-};
-
-// Input validation middleware
-export const validateRegistration = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Valid email is required'),
-  body('password')
-    .isLength({ min: 8 })
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-    .withMessage('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
-  (req: Request, res: Response, next: NextFunction) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errors.array()
-      });
+    // 開発環境ではoriginがundefinedの場合も許可
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-    next();
-  }
-];
-
-export const validateLogin = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Valid email is required'),
-  body('password')
-    .notEmpty()
-    .withMessage('Password is required'),
-  (req: Request, res: Response, next: NextFunction) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errors.array()
-      });
-    }
-    next();
-  }
-];
-
-// Password strength validation
-export const validatePasswordStrength = (password: string): { isValid: boolean; errors: string[] } => {
-  const errors: string[] = [];
-  
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
-  }
-  
-  if (!/(?=.*[a-z])/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
-  }
-  
-  if (!/(?=.*[A-Z])/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
-  }
-  
-  if (!/(?=.*\d)/.test(password)) {
-    errors.push('Password must contain at least one number');
-  }
-  
-  if (!/(?=.*[@$!%*?&])/.test(password)) {
-    errors.push('Password must contain at least one special character (@$!%*?&)');
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-Total-Count', 'X-Rate-Limit-Remaining']
 };
 
-// Password hashing with salt
-export const hashPassword = async (password: string): Promise<string> => {
-  const saltRounds = 12;
-  return await bcrypt.hash(password, saltRounds);
-};
+export const corsMiddleware = cors(corsOptions);
 
-// Password verification
-export const verifyPassword = async (password: string, hashedPassword: string): Promise<boolean> => {
-  return await bcrypt.compare(password, hashedPassword);
-};
-
-// Generate secure random token
-export const generateSecureToken = (length: number = 32): string => {
-  return crypto.randomBytes(length).toString('hex');
-};
-
-// Generate API key
-export const generateApiKey = (): string => {
-  return `ins_${crypto.randomBytes(24).toString('hex')}`;
-};
-
-// Sanitize user input
-export const sanitizeInput = (input: string): string => {
-  return input
-    .trim()
-    .replace(/[<>]/g, '') // Remove potential HTML tags
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, ''); // Remove event handlers
-};
-
-// XSS protection middleware
-export const xssProtection = (req: Request, res: Response, next: NextFunction) => {
-  // Sanitize body
+// XSS保護
+export const xssProtection = (req: Request, _res: Response, next: NextFunction) => {
+  // リクエストボディのサニタイゼーション
   if (req.body) {
-    Object.keys(req.body).forEach(key => {
-      if (typeof req.body[key] === 'string') {
-        req.body[key] = sanitizeInput(req.body[key]);
+    const sanitizeObject = (obj: any): any => {
+      if (typeof obj === 'string') {
+        return obj.replace(/[<>]/g, '');
       }
-    });
-  }
-  
-  // Sanitize query parameters
-  if (req.query) {
-    Object.keys(req.query).forEach(key => {
-      if (typeof req.query[key] === 'string') {
-        req.query[key] = sanitizeInput(req.query[key] as string);
+      if (Array.isArray(obj)) {
+        return obj.map(sanitizeObject);
       }
-    });
-  }
-  
-  next();
-};
-
-// CSRF protection middleware
-export const csrfProtection = (req: Request, res: Response, next: NextFunction) => {
-  // Skip CSRF check for GET requests
-  if (req.method === 'GET') {
-    return next();
-  }
-  
-  const csrfToken = req.headers['x-csrf-token'] || req.body._csrf;
-  const sessionToken = req.session?.csrfToken;
-  
-  if (!csrfToken || !sessionToken || csrfToken !== sessionToken) {
-    return res.status(403).json({
-      success: false,
-      error: 'CSRF token validation failed'
-    });
-  }
-  
-  next();
-};
-
-// Request logging middleware
-export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
-  const start = Date.now();
-  
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    const logData = {
-      method: req.method,
-      url: req.url,
-      status: res.statusCode,
-      duration: `${duration}ms`,
-      ip: req.ip || req.connection.remoteAddress,
-      userAgent: req.get('User-Agent'),
-      timestamp: new Date().toISOString()
+      if (obj && typeof obj === 'object') {
+        const sanitized: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+          sanitized[key] = sanitizeObject(value);
+        }
+        return sanitized;
+      }
+      return obj;
     };
     
-    // Log to console in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📝 Request:', logData);
-    }
-    
-    // In production, you might want to log to a file or external service
-  });
+    req.body = sanitizeObject(req.body);
+  }
   
   next();
 };
 
-// Error handling middleware
-export const errorHandler = (error: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('❌ Error:', error);
+// CSRF保護
+export const csrfProtection = (req: Request, res: Response, next: NextFunction): void => {
+  // セッショントークンの検証
+  const sessionToken = (req.session as any)?.csrfToken;
+  const headerToken = req.headers['x-csrf-token'] as string;
   
-  // Don't leak error details in production
-  const isProduction = process.env.NODE_ENV === 'production';
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+    if (!sessionToken || !headerToken || sessionToken !== headerToken) {
+      res.status(403).json({
+        success: false,
+        error: 'CSRF token validation failed'
+      });
+      return;
+    }
+  }
   
-  if (error.name === 'ValidationError') {
-    return res.status(400).json({
-      success: false,
-      error: 'Validation failed',
-      details: isProduction ? undefined : error.details
+  next();
+};
+
+// 入力値検証ミドルウェア
+export const validateInput = (validations: any[]) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    await Promise.all(validations.map(validation => validation.run(req)));
+    
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors.array()
+      });
+      return;
+    }
+    
+    next();
+  };
+};
+
+// 一般的な入力値検証ルール
+export const commonValidations = {
+  email: body('email').isEmail().normalizeEmail(),
+  password: body('password').isLength({ min: 8 }).matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
+  projectId: body('projectId').isUUID(),
+  url: body('url').isURL(),
+  pageUrl: body('pageUrl').isURL(),
+  eventType: body('eventType').isString().isLength({ min: 1, max: 100 }),
+  deviceType: body('deviceType').isIn(['desktop', 'mobile', 'tablet']),
+  browser: body('browser').isString().isLength({ min: 1, max: 50 }),
+  referrer: body('referrer').optional().isURL()
+};
+
+// セッションセキュリティ
+export const sessionSecurity = (req: Request, _res: Response, next: NextFunction) => {
+  // セッション固定攻撃対策
+  if ((req.session as any).userId && !(req.session as any).regenerated) {
+    (req.session as any).regenerate((err: any) => {
+      if (err) {
+        console.error('Session regeneration error:', err);
+      }
+      (req.session as any).regenerated = true;
+      next();
     });
+  } else {
+    next();
+  }
+};
+
+// エラーハンドラー
+export const errorHandler = (error: any, _req: Request, res: Response, _next: NextFunction): void => {
+  console.error('Error:', error);
+  
+  // セキュリティ関連のエラーは詳細を隠す
+  if (error.name === 'ValidationError') {
+    res.status(400).json({
+      success: false,
+      error: 'Invalid input data'
+    });
+    return;
   }
   
   if (error.name === 'UnauthorizedError') {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
-      error: 'Unauthorized'
+      error: 'Authentication required'
     });
+    return;
   }
   
-  if (error.name === 'ForbiddenError') {
-    return res.status(403).json({
-      success: false,
-      error: 'Forbidden'
-    });
-  }
+  // 本番環境では詳細エラーを隠す
+  const isProduction = process.env.NODE_ENV === 'production';
   
-  // Default error response
   res.status(500).json({
     success: false,
     error: isProduction ? 'Internal server error' : error.message
   });
 };
 
-// Security headers middleware
-export const securityHeaders = (req: Request, res: Response, next: NextFunction) => {
-  // Prevent clickjacking
-  res.setHeader('X-Frame-Options', 'DENY');
+// リクエストログ
+export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
   
-  // Prevent MIME type sniffing
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  
-  // Enable XSS protection
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  
-  // Strict transport security (HTTPS only)
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
-  
-  // Content security policy
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';");
-  
-  // Referrer policy
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const logData = {
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      url: req.url,
+      status: res.statusCode,
+      duration: `${duration}ms`,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      userId: (req.session as any)?.userId || 'anonymous'
+    };
+    
+    console.log(JSON.stringify(logData));
+  });
   
   next();
 };
 
-// Session security middleware
-export const sessionSecurity = (req: Request, res: Response, next: NextFunction) => {
-  if (req.session) {
-    // Regenerate session ID on login
-    if (req.session.userId && !req.session.regenerated) {
-      req.session.regenerate((err) => {
-        if (err) {
-          console.error('Session regeneration error:', err);
-        }
-      });
-    }
-    
-    // Set session timeout
-    req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours
-    
-    // Secure session in production
-    if (process.env.NODE_ENV === 'production') {
-      req.session.cookie.secure = true;
-      req.session.cookie.httpOnly = true;
-      req.session.cookie.sameSite = 'strict';
-    }
+// セキュリティ監査ログ
+export const securityAuditLog = (req: Request, res: Response, next: NextFunction) => {
+  const suspiciousPatterns = [
+    /<script/i,
+    /javascript:/i,
+    /on\w+\s*=/i,
+    /union\s+select/i,
+    /drop\s+table/i,
+    /exec\s*\(/i
+  ];
+  
+  const requestString = JSON.stringify({
+    body: req.body,
+    query: req.query,
+    params: req.params,
+    headers: req.headers
+  });
+  
+  const isSuspicious = suspiciousPatterns.some(pattern => pattern.test(requestString));
+  
+  if (isSuspicious) {
+    console.warn('Suspicious request detected:', {
+      timestamp: new Date().toISOString(),
+      ip: req.ip,
+      url: req.url,
+      method: req.method,
+      userAgent: req.get('User-Agent'),
+      requestData: requestString
+    });
   }
   
   next();

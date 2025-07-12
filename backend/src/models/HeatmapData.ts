@@ -16,7 +16,7 @@ export class HeatmapDataModel {
     const result = await pool.query(query, values);
     
     // Update or create heatmap page record
-    await this.updateHeatmapPage(projectId, pageUrl, pageTitle, heatmapType);
+    await this.updateHeatmapPage(projectId, pageUrl, pageTitle || '', heatmapType);
     
     return result.rows[0];
   }
@@ -197,7 +197,7 @@ export class HeatmapDataModel {
     `;
     
     const result = await pool.query(query);
-    return result.rowCount;
+    return result.rowCount || 0;
   }
 
   // Get heatmap data for export

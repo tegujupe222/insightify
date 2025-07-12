@@ -1,11 +1,10 @@
 import pool from '../config/database';
-import { PageView, Event, Session } from '../types';
 
 export class AnalyticsModel {
   static async createPageViews(pageViews: any[]): Promise<void> {
     if (pageViews.length === 0) return;
 
-    const values = pageViews.map((pv, index) => {
+    const values = pageViews.map((_pv, index) => {
       const offset = index * 8;
       return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`;
     }).join(', ');
@@ -32,7 +31,7 @@ export class AnalyticsModel {
   static async createEvents(events: any[]): Promise<void> {
     if (events.length === 0) return;
 
-    const values = events.map((event, index) => {
+    const values = events.map((_event, index) => {
       const offset = index * 5;
       return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
     }).join(', ');
@@ -57,7 +56,7 @@ export class AnalyticsModel {
     if (heatmapData.length === 0) return;
 
     // Use dedicated heatmap_data table for better performance
-    const values = heatmapData.map((hd, index) => {
+    const values = heatmapData.map((_hd, index) => {
       const offset = index * 5;
       return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
     }).join(', ');
@@ -176,7 +175,7 @@ export class AnalyticsModel {
     };
   }
 
-  static async getTimeSeriesData(projectId: string, startDate: Date, endDate: Date, period: string): Promise<any[]> {
+  static async getTimeSeriesData(projectId: string, startDate: Date, endDate: Date, _period: string): Promise<any[]> {
     // Use materialized view for better performance
     const query = `
       SELECT 
@@ -511,7 +510,7 @@ export class AnalyticsModel {
   }
 
   // Get data for export
-  static async getExportData(projectId: string, type: string, startDate: Date, endDate: Date, filters: any = {}): Promise<any[]> {
+  static async getExportData(projectId: string, type: string, startDate: Date, endDate: Date, _filters: any = {}): Promise<any[]> {
     let query = '';
     let values = [projectId, startDate, endDate];
 
@@ -573,7 +572,7 @@ export class AnalyticsModel {
   }
 
   // Convert data to CSV format
-  static convertToCSV(data: any[], type: string): string {
+  static convertToCSV(data: any[], _type: string): string {
     if (data.length === 0) return '';
 
     const headers = Object.keys(data[0]);

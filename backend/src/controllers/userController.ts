@@ -4,7 +4,7 @@ import { ApiResponse } from '../types';
 
 export class UserController {
   // Get all users (admin only)
-  static async getAllUsers(req: Request, res: Response) {
+  static async getAllUsers(_req: Request, res: Response) {
     try {
       const users = await UserModel.findAll();
       
@@ -38,7 +38,7 @@ export class UserController {
       }
 
       // Check if user has access to this user data
-      if (req.user!.role !== 'admin' && req.user!.userId !== id) {
+      if ((req.user as any)!.role !== 'admin' && (req.user as any)!.id !== id) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -76,7 +76,7 @@ export class UserController {
       }
 
       // Check if user has permission to update
-      if (req.user!.role !== 'admin' && req.user!.userId !== id) {
+      if ((req.user as any)!.role !== 'admin' && (req.user as any)!.id !== id) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -84,7 +84,7 @@ export class UserController {
       }
 
       // Non-admin users can only update certain fields
-      if (req.user!.role !== 'admin') {
+      if ((req.user as any)!.role !== 'admin') {
         const allowedFields = ['email']; // Add more fields as needed
         const filteredUpdates: any = {};
         
@@ -135,7 +135,7 @@ export class UserController {
       }
 
       // Prevent admin from deleting themselves
-      if (req.user!.userId === id) {
+      if ((req.user as any)!.id === id) {
         return res.status(400).json({
           success: false,
           error: 'Cannot delete your own account'
@@ -180,7 +180,7 @@ export class UserController {
       }
 
       // Prevent admin from banning themselves
-      if (req.user!.userId === id) {
+      if ((req.user as any)!.id === id) {
         return res.status(400).json({
           success: false,
           error: 'Cannot ban your own account'
@@ -225,7 +225,7 @@ export class UserController {
       if (!['admin', 'user'].includes(role)) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid role. Must be "admin" or "user"'
+          error: 'Invalid role'
         });
       }
 
@@ -238,7 +238,7 @@ export class UserController {
       }
 
       // Prevent admin from changing their own role
-      if (req.user!.userId === id) {
+      if ((req.user as any)!.id === id) {
         return res.status(400).json({
           success: false,
           error: 'Cannot change your own role'

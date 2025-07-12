@@ -5,7 +5,7 @@ export class PaymentService {
   // Bank transfer specific methods
   static async createBankTransferPayment(
     amount: number,
-    customerId: string,
+    _customerId: string,
     description: string
   ): Promise<{
     paymentId: string;
@@ -33,7 +33,7 @@ export class PaymentService {
 
   // Create subscription for bank transfer
   static async createSubscription(
-    customerId: string,
+    _customerId: string,
     subscriptionData: SubscriptionCreateInput
   ): Promise<{
     subscriptionId: string;
@@ -86,10 +86,10 @@ export class PaymentService {
 
   // Create invoice for bank transfer
   static async createInvoice(
-    customerId: string,
+    _customerId: string,
     amount: number,
     description: string,
-    metadata?: Record<string, string>
+    _metadata?: Record<string, string>
   ): Promise<{
     invoiceId: string;
     amount: number;

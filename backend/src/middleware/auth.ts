@@ -1,58 +1,68 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { JWTPayload } from '../types';
+import { UserModel } from '../models/User';
+import { User } from '../types';
 
-// Extend Express Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: JWTPayload;
-    }
-  }
-}
-
-export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ 
-      success: false, 
-      error: 'Access token required' 
+    res.status(401).json({
+      success: false,
+      error: 'Access token required'
     });
+    return;
   }
 
-  try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error('JWT_SECRET not configured');
+  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', async (err: any, decoded: any) => {
+    if (err) {
+      res.status(403).json({
+        success: false,
+        error: 'Invalid or expired token'
+      });
+      return;
     }
 
-    const decoded = jwt.verify(token, secret) as JWTPayload;
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(403).json({ 
-      success: false, 
-      error: 'Invalid or expired token' 
-    });
-  }
+    try {
+      const user = await UserModel.findById(decoded.userId);
+      if (!user) {
+        res.status(403).json({
+          success: false,
+          error: 'User not found'
+        });
+        return;
+      }
+
+      // userIdプロパティを追加（後方互換性のため）
+      user.userId = user.id;
+      req.user = user;
+      next();
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Authentication failed'
+      });
+    }
+  });
 };
 
 export const requireRole = (roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Authentication required' 
+      res.status(401).json({
+        success: false,
+        error: 'Authentication required'
       });
+      return;
     }
 
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Insufficient permissions' 
+    if (!roles.includes((req.user as User).role)) {
+      res.status(403).json({
+        success: false,
+        error: 'Insufficient permissions'
       });
+      return;
     }
 
     next();

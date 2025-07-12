@@ -22,7 +22,7 @@ passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID!,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
   callbackURL: process.env.GOOGLE_CALLBACK_URL!,
-}, async (accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback) => {
+}, async (_accessToken: string, _refreshToken: string, profile: Profile, done: VerifyCallback) => {
   try {
     const email = profile.emails?.[0]?.value;
     if (!email) return done(new Error('No email found'), false);
