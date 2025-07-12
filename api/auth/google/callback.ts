@@ -1,30 +1,40 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import passport from 'passport';
 import jwt from 'jsonwebtoken';
+import { google } from 'googleapis';
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === 'GET') {
-    passport.authenticate('google', { failureRedirect: '/' }, (err: any, user: any) => {
-      if (err || !user) {
-        console.error('OAuth error:', err, user);
-        return res.redirect('/?error=auth_failed');
-      }
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const { code } = req.query;
+  if (!code) {
+    return res.status(400).send('No code provided');
+  }
 
-      try {
-        const token = jwt.sign(
-          { userId: user.id, email: user.email, role: user.role },
-          process.env.JWT_SECRET || 'fallback-secret',
-          { expiresIn: '7d' }
-        );
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_CALLBACK_URL // ここは https://.../api/auth/google/callback
+  );
 
-        const frontendUrl = process.env.FRONTEND_URL || 'https://insightify-eight.vercel.app';
-        res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
-      } catch (error) {
-        console.error('JWT error:', error);
-        res.redirect('/?error=token_error');
-      }
-    })(req, res); // nextは渡さない
-  } else {
-    res.status(405).json({ error: 'Method not allowed' });
+  try {
+    const { tokens } = await oauth2Client.getToken(code as string);
+    oauth2Client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+    const { data } = await oauth2.userinfo.get();
+
+    // 必要なユーザー情報を抽出
+    const user = {
+      id: data.id,
+      email: data.email,
+      name: data.name,
+      role: 'user'
+    };
+
+    const token = jwt.sign(user, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: '7d' });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://insightify-eight.vercel.app';
+    res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
+  } catch (error) {
+    console.error('Google OAuth error:', error);
+    res.redirect('/?error=auth_failed');
   }
 } 
