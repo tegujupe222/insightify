@@ -6,7 +6,9 @@ import { ProjectList } from './components/ProjectList';
 import { AddProjectModal } from './components/AddProjectModal';
 import { TrackingCodeModal } from './components/TrackingCodeModal';
 import { AdminDashboard } from './components/AdminDashboard';
+import { AuthCallback } from './components/AuthCallback';
 import type { Project, AuthUser } from './types';
+import jwtDecode from 'jwt-decode';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -15,12 +17,32 @@ const App: React.FC = () => {
   const [isAddProjectModalOpen, setIsAddProjectModalOpen] = useState(false);
   const [newlyCreatedProject, setNewlyCreatedProject] = useState<Project | null>(null); // To show tracking code
 
+  // 自動ログイン維持・ユーザー情報の永続化
+  React.useEffect(() => {
+    if (!currentUser) {
+      const token = localStorage.getItem('jwt');
+      if (token) {
+        try {
+          const decoded: any = jwtDecode(token);
+          const user: AuthUser = {
+            email: decoded.email,
+            role: decoded.role,
+          };
+          setCurrentUser(user);
+        } catch (e) {
+          localStorage.removeItem('jwt');
+        }
+      }
+    }
+  }, [currentUser]);
+
   const handleLoginSuccess = (user: AuthUser) => setCurrentUser(user);
 
   const handleLogout = () => {
     setCurrentUser(null);
     setSelectedProject(null);
     setProjects([]);
+    localStorage.removeItem('jwt'); // トークン削除
   };
 
   const handleAddProject = (name: string, url: string) => {
@@ -40,6 +62,11 @@ const App: React.FC = () => {
   const handleBackToProjects = () => {
     setSelectedProject(null);
   };
+
+  // Google OAuth認証後のコールバック処理
+  if (window.location.pathname === '/auth/callback') {
+    return <AuthCallback onLoginSuccess={handleLoginSuccess} />;
+  }
 
   if (!currentUser) {
     return <Login onLoginSuccess={handleLoginSuccess} />;

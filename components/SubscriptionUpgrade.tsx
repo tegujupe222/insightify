@@ -8,6 +8,14 @@ interface SubscriptionUpgradeProps {
   onUpgrade: (planType: 'monthly' | 'yearly') => void;
 }
 
+interface BankTransferInfo {
+  bankName: string;
+  branch: string;
+  accountType: string;
+  accountNumber: string;
+  accountHolder: string;
+}
+
 export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
   currentPlan,
   monthlyPageViews,
@@ -16,6 +24,9 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
 }) => {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showBankInfo, setShowBankInfo] = useState(false);
+  const [bankInfo, setBankInfo] = useState<BankTransferInfo | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const usagePercentage = (monthlyPageViews / pageViewsLimit) * 100;
   const isNearLimit = usagePercentage >= 80;
@@ -44,6 +55,65 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
     if (isAtLimit) return 'bg-red-500';
     if (isNearLimit) return 'bg-yellow-500';
     return 'bg-green-500';
+  };
+
+  const fetchBankInfo = async () => {
+    try {
+      const response = await fetch('/api/payments/bank-info');
+      const data = await response.json();
+      if (data.success) {
+        setBankInfo(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch bank info:', error);
+    }
+  };
+
+  const handleUpgradeClick = async () => {
+    setLoading(true);
+    try {
+      // 銀行振込情報を取得
+      await fetchBankInfo();
+      setShowUpgradeModal(true);
+    } catch (error) {
+      console.error('Failed to start upgrade process:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmUpgrade = async () => {
+    setLoading(true);
+    try {
+      // サブスクリプションリクエストを作成
+      const response = await fetch('/api/subscriptions/upgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+        },
+        body: JSON.stringify({ planType: selectedPlan })
+      });
+
+      if (response.ok) {
+        setShowUpgradeModal(false);
+        setShowBankInfo(true);
+        onUpgrade(selectedPlan);
+      } else {
+        throw new Error('Failed to create subscription request');
+      }
+    } catch (error) {
+      console.error('Failed to upgrade:', error);
+      alert('アップグレードリクエストの作成に失敗しました。');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('コピーしました');
+    });
   };
 
   if (currentPlan === 'premium') {
@@ -120,9 +190,9 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
           {isAtLimit && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
               <div className="flex items-center space-x-2">
-                <Icon name="alert-triangle" className="h-5 w-5 text-red-500" />
+                <Icon name="alert-circle" className="h-5 w-5 text-red-500" />
                 <span className="text-red-400 text-sm font-medium">
-                  制限に達しました。新規データの収集が停止されます。
+                  ページビュー制限に達しました。アップグレードが必要です。
                 </span>
               </div>
             </div>
@@ -130,16 +200,27 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
 
           {currentPlan === 'free' && (
             <button
-              onClick={() => setShowUpgradeModal(true)}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              onClick={handleUpgradeClick}
+              disabled={loading}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
             >
-              プレミアムプランにアップグレード
+              {loading ? (
+                <>
+                  <Icon name="loader" className="h-5 w-5 animate-spin" />
+                  <span>処理中...</span>
+                </>
+              ) : (
+                <>
+                  <Icon name="arrow-up" className="h-5 w-5" />
+                  <span>プレミアムにアップグレード</span>
+                </>
+              )}
             </button>
           )}
         </div>
       </div>
 
-      {/* Upgrade Modal */}
+      {/* アップグレード選択モーダル */}
       {showUpgradeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-xl max-w-md w-full p-6">
@@ -191,45 +272,150 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
               ))}
             </div>
 
-            <div className="bg-gray-700 rounded-lg p-4 mb-6">
-              <h4 className="font-semibold text-white mb-2">プレミアムプランの特典</h4>
-              <ul className="space-y-2 text-sm text-gray-300">
-                <li className="flex items-center space-x-2">
-                  <Icon name="check" className="h-4 w-4 text-green-400" />
-                  <span>無制限のページビュー</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Icon name="check" className="h-4 w-4 text-green-400" />
-                  <span>全機能の利用</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Icon name="check" className="h-4 w-4 text-green-400" />
-                  <span>優先サポート</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Icon name="check" className="h-4 w-4 text-green-400" />
-                  <span>詳細な分析レポート</span>
-                </li>
-              </ul>
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
+              <div className="flex items-start space-x-2">
+                <Icon name="info" className="h-5 w-5 text-blue-400 mt-0.5" />
+                <div className="text-sm text-blue-300">
+                  <p className="font-medium mb-1">銀行振込でのお支払い</p>
+                  <p>プラン選択後、銀行振込先情報をお送りします。お振込確認後、プレミアム機能が有効になります。</p>
+                </div>
+              </div>
             </div>
 
             <div className="flex space-x-3">
               <button
                 onClick={() => setShowUpgradeModal(false)}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
               >
                 キャンセル
               </button>
               <button
-                onClick={() => {
-                  onUpgrade(selectedPlan);
-                  setShowUpgradeModal(false);
-                }}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                onClick={handleConfirmUpgrade}
+                disabled={loading}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
               >
-                アップグレード
+                {loading ? (
+                  <>
+                    <Icon name="loader" className="h-4 w-4 animate-spin" />
+                    <span>処理中...</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon name="check" className="h-4 w-4" />
+                    <span>選択したプランで申し込む</span>
+                  </>
+                )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 銀行振込情報モーダル */}
+      {showBankInfo && bankInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">銀行振込先情報</h3>
+              <button
+                onClick={() => setShowBankInfo(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <Icon name="x" className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Icon name="check-circle" className="h-5 w-5 text-green-400" />
+                  <span className="text-green-400 font-medium">申し込み完了</span>
+                </div>
+                <p className="text-green-300 text-sm">
+                  プレミアムプランの申し込みを受け付けました。下記の銀行口座にお振込ください。
+                </p>
+              </div>
+
+              <div className="bg-gray-700 rounded-lg p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">銀行名</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-white font-medium">{bankInfo.bankName}</span>
+                    <button
+                      onClick={() => copyToClipboard(bankInfo.bankName)}
+                      className="text-indigo-400 hover:text-indigo-300"
+                    >
+                      <Icon name="copy" className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">支店名</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-white font-medium">{bankInfo.branch}</span>
+                    <button
+                      onClick={() => copyToClipboard(bankInfo.branch)}
+                      className="text-indigo-400 hover:text-indigo-300"
+                    >
+                      <Icon name="copy" className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">口座種別</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-white font-medium">{bankInfo.accountType}</span>
+                    <button
+                      onClick={() => copyToClipboard(bankInfo.accountType)}
+                      className="text-indigo-400 hover:text-indigo-300"
+                    >
+                      <Icon name="copy" className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">口座番号</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-white font-medium font-mono">{bankInfo.accountNumber}</span>
+                    <button
+                      onClick={() => copyToClipboard(bankInfo.accountNumber)}
+                      className="text-indigo-400 hover:text-indigo-300"
+                    >
+                      <Icon name="copy" className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">口座名義</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-white font-medium">{bankInfo.accountHolder}</span>
+                    <button
+                      onClick={() => copyToClipboard(bankInfo.accountHolder)}
+                      className="text-indigo-400 hover:text-indigo-300"
+                    >
+                      <Icon name="copy" className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                <div className="flex items-start space-x-2">
+                  <Icon name="alert-triangle" className="h-5 w-5 text-yellow-400 mt-0.5" />
+                  <div className="text-sm text-yellow-300">
+                    <p className="font-medium mb-1">重要</p>
+                    <p>お振込の際は、必ずお客様のメールアドレスを振込依頼人名に入れてください。振込確認後、プレミアム機能が有効になります。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowBankInfo(false)}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
+            >
+              閉じる
+            </button>
           </div>
         </div>
       )}

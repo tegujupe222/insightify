@@ -28,12 +28,18 @@ export const initializeDatabase = async () => {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name VARCHAR(255) NOT NULL,
         url VARCHAR(500) NOT NULL,
+        domains JSONB DEFAULT '[]',
         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         tracking_code TEXT NOT NULL,
         is_active BOOLEAN NOT NULL DEFAULT true,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
+    `);
+
+    // Add domains column if not exists
+    await pool.query(`
+      ALTER TABLE projects ADD COLUMN IF NOT EXISTS domains JSONB DEFAULT '[]'
     `);
 
     // Create subscriptions table for payment tracking
@@ -163,6 +169,13 @@ export const initializeDatabase = async () => {
     // Add organization_id to users table
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id)
+    `);
+
+    // Add is_banned and banned_at columns if not exist
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP WITH TIME ZONE
     `);
 
     // 既存ユーザーにorganizationを自動作成・紐付け

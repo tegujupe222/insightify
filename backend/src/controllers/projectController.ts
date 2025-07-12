@@ -10,6 +10,14 @@ export class ProjectController {
         userId: req.user!.userId
       };
 
+      // Validate domains if provided
+      if (projectData.domains && !Array.isArray(projectData.domains)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Domains must be an array'
+        });
+      }
+
       const project = await ProjectModel.create(projectData);
 
       const response: ApiResponse = {

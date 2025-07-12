@@ -137,6 +137,70 @@ export class AnalyticsController {
     }
   }
 
+  static async getFilteredAnalytics(req: Request, res: Response) {
+    try {
+      const { projectId } = req.params;
+      const { 
+        startDate, 
+        endDate, 
+        period = '30d',
+        pageUrl,
+        eventType,
+        deviceType,
+        browser,
+        referrer,
+        limit = '100'
+      } = req.query;
+
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Project ID is required'
+        });
+      }
+
+      // Calculate date range
+      const end = endDate ? new Date(endDate as string) : new Date();
+      const start = startDate ? new Date(startDate as string) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      // Build filter conditions
+      const filters: any = {};
+      if (pageUrl) filters.pageUrl = pageUrl as string;
+      if (eventType) filters.eventType = eventType as string;
+      if (deviceType) filters.deviceType = deviceType as string;
+      if (browser) filters.browser = browser as string;
+      if (referrer) filters.referrer = referrer as string;
+
+      // Get filtered analytics data
+      const filteredData = await AnalyticsModel.getFilteredData(
+        projectId, 
+        start, 
+        end, 
+        filters, 
+        parseInt(limit as string)
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        data: {
+          pageViews: filteredData.pageViews,
+          events: filteredData.events,
+          sessions: filteredData.sessions,
+          filters,
+          dateRange: { start, end }
+        }
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('Get filtered analytics error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
+  }
+
   static async getHeatmap(req: Request, res: Response) {
     try {
       const { projectId } = req.params;
@@ -200,6 +264,103 @@ export class AnalyticsController {
       res.json(response);
     } catch (error) {
       console.error('Get live visitors error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
+  }
+
+  static async exportData(req: Request, res: Response) {
+    try {
+      const { projectId } = req.params;
+      const { 
+        type = 'pageviews',
+        format = 'csv',
+        startDate, 
+        endDate,
+        filters = {}
+      } = req.query;
+
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Project ID is required'
+        });
+      }
+
+      // Calculate date range
+      const end = endDate ? new Date(endDate as string) : new Date();
+      const start = startDate ? new Date(startDate as string) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      // Get data for export
+      const exportData = await AnalyticsModel.getExportData(
+        projectId,
+        type as string,
+        start,
+        end,
+        filters as any
+      );
+
+      if (format === 'csv') {
+        const csv = AnalyticsModel.convertToCSV(exportData, type as string);
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${type}-${projectId}-${start.toISOString().split('T')[0]}.csv"`);
+        res.send(csv);
+      } else {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${type}-${projectId}-${start.toISOString().split('T')[0]}.json"`);
+        res.json(exportData);
+      }
+    } catch (error) {
+      console.error('Export data error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
+  }
+
+  static async getCustomEvents(req: Request, res: Response) {
+    try {
+      const { projectId } = req.params;
+      const { startDate, endDate, limit = '100' } = req.query;
+
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Project ID is required'
+        });
+      }
+
+      // Calculate date range
+      const end = endDate ? new Date(endDate as string) : new Date();
+      const start = startDate ? new Date(startDate as string) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      // Get custom events (excluding system events like pageview, click, scroll)
+      const customEvents = await AnalyticsModel.getCustomEvents(
+        projectId,
+        start,
+        end,
+        parseInt(limit as string)
+      );
+
+      // Get event types summary
+      const eventTypes = await AnalyticsModel.getEventTypesSummary(projectId, start, end);
+
+      const response: ApiResponse = {
+        success: true,
+        data: {
+          customEvents,
+          eventTypes,
+          dateRange: { start, end }
+        }
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('Get custom events error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error'

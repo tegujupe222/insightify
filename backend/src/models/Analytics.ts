@@ -330,7 +330,7 @@ export class AnalyticsModel {
   }
 
   // Get recent page views for real-time updates
-  static async getRecentPageViews(projectId: string, since: Date): Promise<any[]> {
+  static async getRecentPageViews(projectId: string, since: Date, limit: number = 50): Promise<any[]> {
     const query = `
       SELECT 
         pv.id,
@@ -346,10 +346,10 @@ export class AnalyticsModel {
       WHERE pv.project_id = $1 
         AND pv.timestamp > $2
       ORDER BY pv.timestamp DESC
-      LIMIT 50
+      LIMIT $3
     `;
 
-    const result = await pool.query(query, [projectId, since]);
+    const result = await pool.query(query, [projectId, since, limit]);
     return result.rows.map(row => ({
       id: row.id,
       sessionId: row.session_id,
@@ -388,6 +388,263 @@ export class AnalyticsModel {
       eventData: row.event_data,
       pageUrl: row.page_url,
       timestamp: row.timestamp
+    }));
+  }
+
+  // Get detailed live visitors with session information
+  static async getDetailedLiveVisitors(projectId: string, since: Date, limit: number = 50): Promise<any[]> {
+    const query = `
+      SELECT 
+        pv.session_id,
+        pv.page_url as current_page,
+        pv.user_agent,
+        pv.device_type,
+        pv.browser,
+        pv.os,
+        pv.referrer,
+        pv.timestamp as last_activity,
+        COUNT(DISTINCT pv2.id) as total_page_views,
+        COUNT(DISTINCT e.id) as total_events,
+        MIN(pv2.timestamp) as session_start,
+        MAX(pv2.timestamp) as session_end
+      FROM page_views pv
+      LEFT JOIN page_views pv2 ON pv.session_id = pv2.session_id 
+        AND pv2.project_id = $1
+      LEFT JOIN events e ON pv.session_id = e.session_id 
+        AND e.project_id = $1
+      WHERE pv.project_id = $1 
+        AND pv.timestamp > $2
+      GROUP BY pv.session_id, pv.page_url, pv.user_agent, pv.device_type, pv.browser, pv.os, pv.referrer, pv.timestamp
+      ORDER BY pv.timestamp DESC
+      LIMIT $3
+    `;
+
+    const result = await pool.query(query, [projectId, since, limit]);
+    return result.rows.map(row => ({
+      sessionId: row.session_id,
+      currentPage: row.current_page,
+      userAgent: row.user_agent,
+      deviceType: row.device_type,
+      browser: row.browser,
+      os: row.os,
+      referrer: row.referrer,
+      lastActivity: row.last_activity,
+      totalPageViews: parseInt(row.total_page_views) || 0,
+      totalEvents: parseInt(row.total_events) || 0,
+      sessionStart: row.session_start,
+      sessionEnd: row.session_end,
+      sessionDuration: row.session_end && row.session_start 
+        ? Math.round((new Date(row.session_end).getTime() - new Date(row.session_start).getTime()) / 1000)
+        : 0
+    }));
+  }
+
+  // Get filtered analytics data
+  static async getFilteredData(projectId: string, startDate: Date, endDate: Date, filters: any, limit: number = 100): Promise<any> {
+    // Build WHERE conditions for filters
+    const conditions: string[] = [`project_id = $1`, `timestamp BETWEEN $2 AND $3`];
+    const values: any[] = [projectId, startDate, endDate];
+    let paramIndex = 4;
+
+    if (filters.pageUrl) {
+      conditions.push(`page_url ILIKE $${paramIndex}`);
+      values.push(`%${filters.pageUrl}%`);
+      paramIndex++;
+    }
+
+    if (filters.deviceType) {
+      conditions.push(`device_type = $${paramIndex}`);
+      values.push(filters.deviceType);
+      paramIndex++;
+    }
+
+    if (filters.browser) {
+      conditions.push(`browser ILIKE $${paramIndex}`);
+      values.push(`%${filters.browser}%`);
+      paramIndex++;
+    }
+
+    if (filters.referrer) {
+      conditions.push(`referrer ILIKE $${paramIndex}`);
+      values.push(`%${filters.referrer}%`);
+      paramIndex++;
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // Get filtered page views
+    const pageViewsQuery = `
+      SELECT * FROM page_views 
+      WHERE ${whereClause}
+      ORDER BY timestamp DESC
+      LIMIT $${paramIndex}
+    `;
+    const pageViewsResult = await pool.query(pageViewsQuery, [...values, limit.toString()]);
+
+    // Get filtered events
+    const eventsQuery = `
+      SELECT * FROM events 
+      WHERE project_id = $1 AND timestamp BETWEEN $2 AND $3
+      ${filters.eventType ? `AND event_type = $${paramIndex}` : ''}
+      ORDER BY timestamp DESC
+      LIMIT $${paramIndex + (filters.eventType ? 1 : 0)}
+    `;
+    const eventsValues = [projectId, startDate, endDate];
+    if (filters.eventType) eventsValues.push(filters.eventType);
+    eventsValues.push(limit.toString());
+    const eventsResult = await pool.query(eventsQuery, eventsValues);
+
+    // Get filtered sessions
+    const sessionsQuery = `
+      SELECT * FROM sessions 
+      WHERE project_id = $1 AND start_time BETWEEN $2 AND $3
+      ORDER BY start_time DESC
+      LIMIT $${paramIndex}
+    `;
+    const sessionsResult = await pool.query(sessionsQuery, [...values, limit.toString()]);
+
+    return {
+      pageViews: pageViewsResult.rows,
+      events: eventsResult.rows,
+      sessions: sessionsResult.rows
+    };
+  }
+
+  // Get data for export
+  static async getExportData(projectId: string, type: string, startDate: Date, endDate: Date, filters: any = {}): Promise<any[]> {
+    let query = '';
+    let values = [projectId, startDate, endDate];
+
+    switch (type) {
+      case 'pageviews':
+        query = `
+          SELECT 
+            timestamp,
+            page_url,
+            referrer,
+            user_agent,
+            device_type,
+            browser,
+            os,
+            session_id
+          FROM page_views 
+          WHERE project_id = $1 AND timestamp BETWEEN $2 AND $3
+          ORDER BY timestamp DESC
+        `;
+        break;
+      
+      case 'events':
+        query = `
+          SELECT 
+            timestamp,
+            event_type,
+            event_data,
+            page_url,
+            session_id
+          FROM events 
+          WHERE project_id = $1 AND timestamp BETWEEN $2 AND $3
+          ORDER BY timestamp DESC
+        `;
+        break;
+      
+      case 'sessions':
+        query = `
+          SELECT 
+            start_time,
+            end_time,
+            page_views,
+            events,
+            device_type,
+            browser,
+            os,
+            visitor_id
+          FROM sessions 
+          WHERE project_id = $1 AND start_time BETWEEN $2 AND $3
+          ORDER BY start_time DESC
+        `;
+        break;
+      
+      default:
+        throw new Error('Invalid export type');
+    }
+
+    const result = await pool.query(query, values);
+    return result.rows;
+  }
+
+  // Convert data to CSV format
+  static convertToCSV(data: any[], type: string): string {
+    if (data.length === 0) return '';
+
+    const headers = Object.keys(data[0]);
+    const csvHeaders = headers.join(',');
+    const csvRows = data.map(row => 
+      headers.map(header => {
+        const value = row[header];
+        // Escape commas and quotes in CSV
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      }).join(',')
+    );
+
+    return [csvHeaders, ...csvRows].join('\n');
+  }
+
+  // Get custom events (excluding system events)
+  static async getCustomEvents(projectId: string, startDate: Date, endDate: Date, limit: number = 100): Promise<any[]> {
+    const systemEvents = ['pageview', 'click', 'scroll', 'move'];
+    const placeholders = systemEvents.map((_, i) => `$${i + 4}`).join(', ');
+    
+    const query = `
+      SELECT 
+        id,
+        session_id,
+        event_type,
+        event_data,
+        page_url,
+        timestamp
+      FROM events 
+      WHERE project_id = $1 
+        AND timestamp BETWEEN $2 AND $3
+        AND event_type NOT IN (${placeholders})
+      ORDER BY timestamp DESC
+      LIMIT $${systemEvents.length + 4}
+    `;
+
+    const values = [projectId, startDate, endDate, ...systemEvents, limit.toString()];
+    const result = await pool.query(query, values);
+    
+    return result.rows.map(row => ({
+      id: row.id,
+      sessionId: row.session_id,
+      eventType: row.event_type,
+      eventData: row.event_data,
+      pageUrl: row.page_url,
+      timestamp: row.timestamp
+    }));
+  }
+
+  // Get event types summary
+  static async getEventTypesSummary(projectId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    const query = `
+      SELECT 
+        event_type,
+        COUNT(*) as count,
+        COUNT(DISTINCT session_id) as unique_sessions
+      FROM events 
+      WHERE project_id = $1 
+        AND timestamp BETWEEN $2 AND $3
+      GROUP BY event_type
+      ORDER BY count DESC
+    `;
+
+    const result = await pool.query(query, [projectId, startDate, endDate]);
+    return result.rows.map(row => ({
+      eventType: row.event_type,
+      count: parseInt(row.count) || 0,
+      uniqueSessions: parseInt(row.unique_sessions) || 0
     }));
   }
 } 

@@ -37,6 +37,7 @@ export interface Project {
   id: string;
   name: string;
   url: string;
+  domains?: string[];
   trackingCode: string;
 }
 
@@ -56,4 +57,6 @@ export interface User {
   lastLogin: string;
   projectCount: number;
   status: 'Active' | 'Inactive';
+  role?: 'admin' | 'user';
+  isBanned?: boolean;
 }

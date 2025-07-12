@@ -4,18 +4,22 @@ import { v4 as uuidv4 } from 'uuid';
 
 export class ProjectModel {
   static async create(projectData: ProjectCreateInput): Promise<Project> {
-    const { name, url, userId } = projectData;
+    const { name, url, userId, domains = [] } = projectData;
     const id = uuidv4();
+    
+    // Add the main URL to domains if not already included
+    const allDomains = domains.includes(url) ? domains : [url, ...domains];
+    
     const trackingCode = `<!-- Insightify Tracking Snippet for ${name} -->
 <script async defer src="https://cdn.insightify.com/tracker.js" data-project-id="${id}"></script>`;
     
     const query = `
-      INSERT INTO projects (id, name, url, user_id, tracking_code, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO projects (id, name, url, domains, user_id, tracking_code, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `;
     
-    const result = await pool.query(query, [id, name, url, userId, trackingCode, true]);
+    const result = await pool.query(query, [id, name, url, JSON.stringify(allDomains), userId, trackingCode, true]);
     return result.rows[0];
   }
 

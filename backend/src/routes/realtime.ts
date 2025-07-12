@@ -7,10 +7,13 @@ const router = Router();
 // Get real-time analytics data
 router.get('/:projectId', authenticateToken, RealtimeController.getRealtimeData);
 
-// Get live visitor count
-router.get('/:projectId/live-count', authenticateToken, RealtimeController.getLiveVisitorCount);
+// Get detailed live visitors
+router.get('/:projectId/visitors', authenticateToken, RealtimeController.getDetailedLiveVisitors);
+
+// Get recent page views
+router.get('/:projectId/pageviews', authenticateToken, RealtimeController.getRecentPageViews);
 
 // Get recent events
-router.get('/:projectId/recent-events', authenticateToken, RealtimeController.getRecentEvents);
+router.get('/:projectId/events', authenticateToken, RealtimeController.getRecentEvents);
 
 export default router; 

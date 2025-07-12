@@ -10,6 +10,8 @@ export interface User {
   subscriptionEndDate?: Date;
   monthlyPageViews: number;
   pageViewsLimit: number;
+  isBanned?: boolean;
+  bannedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +63,7 @@ export interface Project {
   id: string;
   name: string;
   url: string;
+  domains?: string[];
   userId: string;
   trackingCode: string;
   isActive: boolean;
@@ -72,6 +75,7 @@ export interface ProjectCreateInput {
   name: string;
   url: string;
   userId: string;
+  domains?: string[];
 }
 
 // Analytics related types

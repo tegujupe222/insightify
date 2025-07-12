@@ -11,7 +11,17 @@ router.post('/batch', AnalyticsController.trackBatch);
 router.use(authenticateToken);
 router.use(requireUser);
 
-router.get('/:projectId', AnalyticsController.getAnalytics);
+// Get custom events
+router.get('/:projectId/custom-events', authenticateToken, requireUser, AnalyticsController.getCustomEvents);
+
+// Export analytics data
+router.get('/:projectId/export', authenticateToken, requireUser, AnalyticsController.exportData);
+
+// Get analytics data with filters
+router.get('/:projectId/filtered', authenticateToken, requireUser, AnalyticsController.getFilteredAnalytics);
+
+// Get analytics data
+router.get('/:projectId', authenticateToken, requireUser, AnalyticsController.getAnalytics);
 router.get('/:projectId/heatmap', AnalyticsController.getHeatmap);
 router.get('/:projectId/live-visitors', AnalyticsController.getLiveVisitors);
 
