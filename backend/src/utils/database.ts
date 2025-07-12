@@ -150,6 +150,37 @@ export const initializeDatabase = async () => {
       )
     `);
 
+    // Create organizations table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS organizations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
+    // Add organization_id to users table
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id)
+    `);
+
+    // 既存ユーザーにorganizationを自動作成・紐付け
+    const usersWithoutOrg = await pool.query(`SELECT id, email FROM users WHERE organization_id IS NULL`);
+    for (const user of usersWithoutOrg.rows) {
+      // organizationsテーブルに新規作成
+      const orgRes = await pool.query(
+        `INSERT INTO organizations (name) VALUES ($1) RETURNING id`,
+        [`${user.email}の組織`]
+      );
+      const orgId = orgRes.rows[0].id;
+      // usersテーブルにorganization_idをセット
+      await pool.query(
+        `UPDATE users SET organization_id = $1 WHERE id = $2`,
+        [orgId, user.id]
+      );
+    }
+
     // Create optimized indexes for better query performance
     await pool.query(`
       -- Page views indexes
