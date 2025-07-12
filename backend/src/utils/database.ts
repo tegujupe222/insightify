@@ -59,7 +59,7 @@ export const initializeDatabase = async () => {
       )
     `);
 
-    // Create email notifications table
+    // Create email notifications table with enhanced tracking
     await pool.query(`
       CREATE TABLE IF NOT EXISTS email_notifications (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -67,27 +67,45 @@ export const initializeDatabase = async () => {
         type VARCHAR(50) NOT NULL CHECK (type IN ('upgrade_recommended', 'subscription_requested', 'subscription_activated', 'payment_confirmed', 'limit_warning')),
         subject VARCHAR(255) NOT NULL,
         content TEXT NOT NULL,
-        sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        read_at TIMESTAMP WITH TIME ZONE
+        status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed')),
+        error_message TEXT,
+        sent_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `);
 
-    // Create page_views table with optimized indexes for analytics
+    // Add status and error_message columns if they don't exist
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS page_views (
+      ALTER TABLE email_notifications ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed'))
+    `);
+
+    await pool.query(`
+      ALTER TABLE email_notifications ADD COLUMN IF NOT EXISTS error_message TEXT
+    `);
+
+    // Update existing records to have 'sent' status if they have sent_at
+    await pool.query(`
+      UPDATE email_notifications 
+      SET status = 'sent' 
+      WHERE sent_at IS NOT NULL AND status = 'pending'
+    `);
+
+    // Create analytics table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS analytics (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        session_id VARCHAR(255) NOT NULL,
-        page_url TEXT NOT NULL,
-        referrer TEXT,
+        page_url VARCHAR(500) NOT NULL,
+        referrer VARCHAR(500),
         user_agent TEXT,
         ip_address INET,
-        timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        device_type VARCHAR(20) CHECK (device_type IN ('desktop', 'mobile', 'tablet')),
-        browser VARCHAR(100),
-        os VARCHAR(100),
-        country VARCHAR(100),
-        city VARCHAR(100)
+        device_type VARCHAR(20),
+        browser VARCHAR(50),
+        os VARCHAR(50),
+        country VARCHAR(50),
+        city VARCHAR(100),
+        session_id VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `);
 
@@ -96,71 +114,37 @@ export const initializeDatabase = async () => {
       CREATE TABLE IF NOT EXISTS events (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        session_id VARCHAR(255) NOT NULL,
-        event_type VARCHAR(100) NOT NULL,
+        event_name VARCHAR(100) NOT NULL,
         event_data JSONB,
-        page_url TEXT NOT NULL,
-        timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        page_url VARCHAR(500),
+        session_id VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `);
 
-    // Create sessions table
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS sessions (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        visitor_id VARCHAR(255) NOT NULL,
-        start_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        end_time TIMESTAMP WITH TIME ZONE,
-        page_views INTEGER DEFAULT 0,
-        events INTEGER DEFAULT 0,
-        device_type VARCHAR(20) CHECK (device_type IN ('desktop', 'mobile', 'tablet')),
-        browser VARCHAR(100),
-        os VARCHAR(100),
-        country VARCHAR(100),
-        city VARCHAR(100)
-      )
-    `);
-
-    // Create heatmap_data table for better performance
+    // Create heatmap data table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS heatmap_data (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        page_url TEXT NOT NULL,
-        page_title VARCHAR(500),
+        page_url VARCHAR(500) NOT NULL,
+        heatmap_type VARCHAR(20) NOT NULL CHECK (heatmap_type IN ('click', 'scroll', 'move')),
         x INTEGER NOT NULL,
         y INTEGER NOT NULL,
-        count INTEGER DEFAULT 1,
-        heatmap_type VARCHAR(20) NOT NULL DEFAULT 'click' CHECK (heatmap_type IN ('click', 'scroll', 'move')),
+        intensity INTEGER DEFAULT 1,
         element_selector TEXT,
         element_text TEXT,
-        timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        session_id VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `);
 
-    // Create heatmap_pages table for page management
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS heatmap_pages (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        page_url TEXT NOT NULL,
-        page_title VARCHAR(500),
-        total_clicks INTEGER DEFAULT 0,
-        total_scrolls INTEGER DEFAULT 0,
-        total_moves INTEGER DEFAULT 0,
-        last_activity TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        UNIQUE(project_id, page_url)
-      )
-    `);
-
-    // Create organizations table
+    // Create organizations table for multi-tenant support
     await pool.query(`
       CREATE TABLE IF NOT EXISTS organizations (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name VARCHAR(255) NOT NULL,
+        owner_id UUID NOT NULL REFERENCES users(id),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
@@ -171,80 +155,29 @@ export const initializeDatabase = async () => {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id)
     `);
 
-    // Add is_banned and banned_at columns if not exist
+    // Create indexes for better performance
     await pool.query(`
-      ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT false,
-      ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP WITH TIME ZONE
+      CREATE INDEX IF NOT EXISTS idx_analytics_project_created ON analytics(project_id, created_at)
     `);
 
-    // 既存ユーザーにorganizationを自動作成・紐付け
-    const usersWithoutOrg = await pool.query(`SELECT id, email FROM users WHERE organization_id IS NULL`);
-    for (const user of usersWithoutOrg.rows) {
-      // organizationsテーブルに新規作成
-      const orgRes = await pool.query(
-        `INSERT INTO organizations (name) VALUES ($1) RETURNING id`,
-        [`${user.email}の組織`]
-      );
-      const orgId = orgRes.rows[0].id;
-      // usersテーブルにorganization_idをセット
-      await pool.query(
-        `UPDATE users SET organization_id = $1 WHERE id = $2`,
-        [orgId, user.id]
-      );
-    }
-
-    // Create optimized indexes for better query performance
     await pool.query(`
-      -- Page views indexes
-      CREATE INDEX IF NOT EXISTS idx_page_views_project_id ON page_views(project_id);
-      CREATE INDEX IF NOT EXISTS idx_page_views_timestamp ON page_views(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_page_views_session_id ON page_views(session_id);
-      CREATE INDEX IF NOT EXISTS idx_page_views_device_type ON page_views(device_type);
-      
-      -- Events indexes
-      CREATE INDEX IF NOT EXISTS idx_events_project_id ON events(project_id);
-      CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_events_session_id ON events(session_id);
-      CREATE INDEX IF NOT EXISTS idx_events_event_type ON events(event_type);
-      CREATE INDEX IF NOT EXISTS idx_events_data_gin ON events USING GIN (event_data);
-      
-      -- Sessions indexes
-      CREATE INDEX IF NOT EXISTS idx_sessions_project_id ON sessions(project_id);
-      CREATE INDEX IF NOT EXISTS idx_sessions_visitor_id ON sessions(visitor_id);
-      CREATE INDEX IF NOT EXISTS idx_sessions_start_time ON sessions(start_time);
-      
-      -- Projects indexes
-      CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
-      CREATE INDEX IF NOT EXISTS idx_projects_is_active ON projects(is_active);
-      
-      -- Heatmap indexes
-      CREATE INDEX IF NOT EXISTS idx_heatmap_project_url ON heatmap_data(project_id, page_url);
-      CREATE INDEX IF NOT EXISTS idx_heatmap_timestamp ON heatmap_data(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_heatmap_type ON heatmap_data(heatmap_type);
-      CREATE INDEX IF NOT EXISTS idx_heatmap_pages_project ON heatmap_pages(project_id);
-      CREATE INDEX IF NOT EXISTS idx_heatmap_pages_url ON heatmap_pages(page_url);
+      CREATE INDEX IF NOT EXISTS idx_events_project_created ON events(project_id, created_at)
     `);
 
-    // Create materialized views for better analytics performance
     await pool.query(`
-      CREATE MATERIALIZED VIEW IF NOT EXISTS daily_analytics AS
-      SELECT 
-        project_id,
-        DATE(timestamp) as date,
-        COUNT(DISTINCT pv.id) as page_views,
-        COUNT(DISTINCT pv.session_id) as sessions,
-        COUNT(DISTINCT s.visitor_id) as unique_visitors
-      FROM page_views pv
-      LEFT JOIN sessions s ON pv.session_id = s.id
-      GROUP BY project_id, DATE(timestamp)
-      ORDER BY project_id, date
+      CREATE INDEX IF NOT EXISTS idx_heatmap_project_page ON heatmap_data(project_id, page_url, heatmap_type)
     `);
 
-    // Create index on materialized view
     await pool.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_analytics_unique 
-      ON daily_analytics (project_id, date)
+      CREATE INDEX IF NOT EXISTS idx_email_notifications_user_type ON email_notifications(user_id, type)
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_email_notifications_status ON email_notifications(status, sent_at)
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_user_status ON subscriptions(user_id, status)
     `);
 
     console.log('✅ Database initialized successfully');
