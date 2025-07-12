@@ -197,5 +197,7 @@ const ICONS: Record<IconName, React.ReactNode> = {
 
 
 export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
-    return React.cloneElement(ICONS[name] as React.ReactElement, props);
+    const icon = ICONS[name];
+    if (!icon || !React.isValidElement(icon)) return null;
+    return React.cloneElement(icon, props);
 };
