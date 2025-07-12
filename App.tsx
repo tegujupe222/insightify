@@ -9,6 +9,7 @@ import { Icon } from './components/Icon';
 import type { AuthUser } from './types';
 import { Routes, Route } from 'react-router-dom';
 import { AuthCallback } from './components/AuthCallback';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthUser) => void; onLogout: () => void; loading: boolean; error: string | null; }> = ({ user, onLoginSuccess, onLogout, loading, error }) => {
   const { showToast } = useToast();
@@ -78,8 +79,21 @@ const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthU
           <Dashboard 
             user={user} 
             onLogout={onLogout}
-            project={null as any}
-            onBackToProjects={() => {}}
+            project={{
+              id: 'default',
+              name: 'Default Project',
+              url: window.location.origin,
+              trackingCode: 'default-tracking-code'
+            }}
+            onBackToProjects={() => {
+              // For now, just show a toast message since we don't have a project list page
+              showToast({
+                type: 'info',
+                title: 'プロジェクト一覧',
+                message: 'プロジェクト一覧機能は現在開発中です',
+                duration: 3000
+              });
+            }}
           />
         )}
       </main>
@@ -134,14 +148,16 @@ const App: React.FC = () => {
   };
 
   return (
-    <ErrorBoundary>
-      <ToastProvider>
-        <Routes>
-          <Route path="/auth/callback" element={<AuthCallback onLoginSuccess={handleLogin} />} />
-          <Route path="*" element={<AppContent user={user} onLoginSuccess={handleLogin} onLogout={handleLogout} loading={loading} error={error} />} />
-        </Routes>
-      </ToastProvider>
-    </ErrorBoundary>
+    <ThemeProvider>
+      <ErrorBoundary>
+        <ToastProvider>
+          <Routes>
+            <Route path="/auth/callback" element={<AuthCallback onLoginSuccess={handleLogin} />} />
+            <Route path="*" element={<AppContent user={user} onLoginSuccess={handleLogin} onLogout={handleLogout} loading={loading} error={error} />} />
+          </Routes>
+        </ToastProvider>
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 };
 
