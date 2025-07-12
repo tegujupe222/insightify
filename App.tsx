@@ -1,118 +1,173 @@
-import React, { useState } from 'react';
-import { ThemeProvider } from './contexts/ThemeContext';
+import React, { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import { Login } from './components/Login';
-import { ProjectList } from './components/ProjectList';
-import { AddProjectModal } from './components/AddProjectModal';
-import { TrackingCodeModal } from './components/TrackingCodeModal';
 import { AdminDashboard } from './components/AdminDashboard';
-import { AuthCallback } from './components/AuthCallback';
-import type { Project, AuthUser } from './types';
-import jwtDecode from 'jwt-decode';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { ToastProvider, useToast } from './components/Toast';
+import { SkipLink, LoadingAnnouncer, ErrorAnnouncer } from './components/Accessibility';
+import { Icon } from './components/Icon';
 
-const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [isAddProjectModalOpen, setIsAddProjectModalOpen] = useState(false);
-  const [newlyCreatedProject, setNewlyCreatedProject] = useState<Project | null>(null); // To show tracking code
+interface User {
+  id: string;
+  email: string;
+  role: 'admin' | 'user';
+  subscriptionStatus: 'free' | 'premium' | 'pending';
+  subscriptionPlan?: 'monthly' | 'yearly';
+  monthlyPageViews: number;
+  pageViewsLimit: number;
+}
 
-  // 自動ログイン維持・ユーザー情報の永続化
-  React.useEffect(() => {
-    if (!currentUser) {
+const AppContent: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
       const token = localStorage.getItem('jwt');
-      if (token) {
-        try {
-          const decoded: any = jwtDecode(token);
-          const user: AuthUser = {
-            email: decoded.email,
-            role: decoded.role,
-          };
-          setCurrentUser(user);
-        } catch (e) {
-          localStorage.removeItem('jwt');
-        }
+      if (!token) {
+        setLoading(false);
+        return;
       }
-    }
-  }, [currentUser]);
 
-  const handleLoginSuccess = (user: AuthUser) => setCurrentUser(user);
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData.data.user);
+        showToast({
+          type: 'success',
+          title: 'ログインしました',
+          message: `${userData.data.user.email}としてログインしています`,
+          duration: 3000
+        });
+      } else {
+        localStorage.removeItem('jwt');
+        showToast({
+          type: 'error',
+          title: 'セッションが期限切れです',
+          message: '再度ログインしてください',
+          duration: 5000
+        });
+      }
+    } catch (err) {
+      console.error('Auth check failed:', err);
+      setError('認証の確認に失敗しました');
+      showToast({
+        type: 'error',
+        title: '認証エラー',
+        message: '認証の確認に失敗しました。再度ログインしてください。',
+        duration: 5000
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (userData: User) => {
+    setUser(userData);
+    showToast({
+      type: 'success',
+      title: 'ログインしました',
+      message: `${userData.email}としてログインしています`,
+      duration: 3000
+    });
+  };
 
   const handleLogout = () => {
-    setCurrentUser(null);
-    setSelectedProject(null);
-    setProjects([]);
-    localStorage.removeItem('jwt'); // トークン削除
+    localStorage.removeItem('jwt');
+    setUser(null);
+    showToast({
+      type: 'info',
+      title: 'ログアウトしました',
+      message: 'セッションを終了しました',
+      duration: 3000
+    });
   };
 
-  const handleAddProject = (name: string, url: string) => {
-    const id = `proj_${Date.now()}`;
-    const trackingCode = `<!-- Insightify Tracking Snippet for ${name} -->
-<script async defer src="https://cdn.insightify.com/tracker.js" data-project-id="${id}"></script>`;
-    const newProject = { id, name, url, trackingCode };
-    setProjects(prev => [...prev, newProject]);
-    setIsAddProjectModalOpen(false);
-    setNewlyCreatedProject(newProject); // Trigger tracking code modal
-  };
-
-  const handleSelectProject = (project: Project) => {
-    setSelectedProject(project);
-  };
-
-  const handleBackToProjects = () => {
-    setSelectedProject(null);
-  };
-
-  // Google OAuth認証後のコールバック処理
-  if (window.location.pathname === '/auth/callback') {
-    return <AuthCallback onLoginSuccess={handleLoginSuccess} />;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Icon name="loader" className="h-12 w-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">読み込み中...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!currentUser) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/20 mb-4">
+              <Icon name="alert-triangle" className="h-8 w-8 text-red-600 dark:text-red-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              認証エラー
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {error}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+            >
+              <Icon name="refresh" className="h-4 w-4 mr-2" />
+              再試行
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  // Render Admin or User view based on role
-  if (currentUser.role === 'admin') {
-    return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
+  if (!user) {
+    return <Login onLoginSuccess={handleLogin} />;
   }
-
 
   return (
-    <ThemeProvider>
-      <div className="bg-gray-900 min-h-screen">
-        {selectedProject ? (
-          <Dashboard 
-            project={selectedProject} 
-            onLogout={handleLogout} 
-            onBackToProjects={handleBackToProjects}
-            user={currentUser}
-          />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <SkipLink />
+      <LoadingAnnouncer isLoading={loading} />
+      <ErrorAnnouncer error={error} />
+      
+      <main id="main-content">
+        {user.role === 'admin' ? (
+          <AdminDashboard user={user} onLogout={handleLogout} />
         ) : (
-          <ProjectList 
-            projects={projects} 
-            onSelectProject={handleSelectProject} 
-            onAddNewProject={() => setIsAddProjectModalOpen(true)}
+          <Dashboard 
+            user={user} 
             onLogout={handleLogout}
-            user={currentUser}
+            project={null}
+            onBackToProjects={() => {}}
           />
         )}
+      </main>
+    </div>
+  );
+};
 
-        {isAddProjectModalOpen && (
-          <AddProjectModal 
-            onAddProject={handleAddProject} 
-            onClose={() => setIsAddProjectModalOpen(false)} 
-          />
-        )}
-        
-        {newlyCreatedProject && (
-          <TrackingCodeModal 
-            project={newlyCreatedProject} 
-            onClose={() => setNewlyCreatedProject(null)} 
-          />
-        )}
-      </div>
-    </ThemeProvider>
+const App: React.FC = () => {
+  return (
+    <ErrorBoundary>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </ErrorBoundary>
   );
 };
 

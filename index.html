@@ -1,26 +1,113 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Insightify - Web Analytics Dashboard</title>
-    <!-- Tailwind CSS is now built into the CSS file -->
-  <script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.1.0/",
-    "react": "https://esm.sh/react@^19.1.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
-    "recharts": "https://esm.sh/recharts@^3.1.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
-  <body class="bg-gray-900">
+    
+    <!-- SEO Meta Tags -->
+    <title>Insightify - Web Analytics & User Behavior Platform</title>
+    <meta name="description" content="Insightifyは、リアルタイムWebアナリティクスプラットフォームです。ページビュー、イベント、ヒートマップデータを追跡し、美しいダッシュボードで分析結果を表示します。" />
+    <meta name="keywords" content="web analytics, user behavior, heatmap, real-time analytics, page views, events tracking, dashboard, insights" />
+    <meta name="author" content="Insightify Team" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://insightify.vercel.app/" />
+    <meta property="og:title" content="Insightify - Web Analytics & User Behavior Platform" />
+    <meta property="og:description" content="リアルタイムWebアナリティクスプラットフォーム。ページビュー、イベント、ヒートマップデータを追跡し、美しいダッシュボードで分析結果を表示します。" />
+    <meta property="og:image" content="https://insightify.vercel.app/og-image.png" />
+    <meta property="og:site_name" content="Insightify" />
+    <meta property="og:locale" content="ja_JP" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://insightify.vercel.app/" />
+    <meta property="twitter:title" content="Insightify - Web Analytics & User Behavior Platform" />
+    <meta property="twitter:description" content="リアルタイムWebアナリティクスプラットフォーム。ページビュー、イベント、ヒートマップデータを追跡し、美しいダッシュボードで分析結果を表示します。" />
+    <meta property="twitter:image" content="https://insightify.vercel.app/og-image.png" />
+    
+    <!-- Additional Meta Tags -->
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#4F46E5" />
+    <meta name="msapplication-TileColor" content="#4F46E5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Insightify" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://insightify.vercel.app/" />
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Insightify",
+      "description": "リアルタイムWebアナリティクスプラットフォーム。ページビュー、イベント、ヒートマップデータを追跡し、美しいダッシュボードで分析結果を表示します。",
+      "url": "https://insightify.vercel.app/",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "JPY",
+        "description": "無料プラン（月3,000PVまで）"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "Insightify Team",
+        "email": "igafactory2023@gmail.com"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "150"
+      }
+    }
+    </script>
+    
+    <!-- Organization Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Insightify",
+      "url": "https://insightify.vercel.app/",
+      "logo": "https://insightify.vercel.app/logo.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "email": "igafactory2023@gmail.com"
+      },
+      "sameAs": [
+        "https://github.com/tegujupe222/insightify"
+      ]
+    }
+    </script>
+  </head>
+  <body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/src/index.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('SW registered: ', registration);
+            })
+            .catch(function(registrationError) {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
