@@ -10,79 +10,19 @@ import type { AuthUser } from './types';
 import { Routes, Route } from 'react-router-dom';
 import { AuthCallback } from './components/AuthCallback';
 
-const AppContent: React.FC<{ onLoginSuccess: (user: AuthUser) => void }> = ({ onLoginSuccess }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthUser) => void; onLogout: () => void; loading: boolean; error: string | null; }> = ({ user, onLoginSuccess, onLogout, loading, error }) => {
   const { showToast } = useToast();
 
   useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const token = localStorage.getItem('jwt');
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData.data.user);
-        showToast({
-          type: 'success',
-          title: 'ログインしました',
-          message: `${userData.data.user.email}としてログインしています`,
-          duration: 3000
-        });
-      } else {
-        localStorage.removeItem('jwt');
-        showToast({
-          type: 'error',
-          title: 'セッションが期限切れです',
-          message: '再度ログインしてください',
-          duration: 5000
-        });
-      }
-    } catch (err) {
-      console.error('Auth check failed:', err);
-      setError('認証の確認に失敗しました');
+    if (user) {
       showToast({
-        type: 'error',
-        title: '認証エラー',
-        message: '認証の確認に失敗しました。再度ログインしてください。',
-        duration: 5000
+        type: 'success',
+        title: 'ログインしました',
+        message: `${user.email}としてログインしています`,
+        duration: 3000
       });
-    } finally {
-      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (user) setLoading(false);
-  }, [user]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('jwt');
-    setUser(null);
-    showToast({
-      type: 'info',
-      title: 'ログアウトしました',
-      message: 'セッションを終了しました',
-      duration: 3000
-    });
-  };
+  }, [user, showToast]);
 
   if (loading) {
     return (
@@ -133,11 +73,11 @@ const AppContent: React.FC<{ onLoginSuccess: (user: AuthUser) => void }> = ({ on
       <ErrorAnnouncer error={error} />
       <main id="main-content">
         {user.role === 'admin' ? (
-          <AdminDashboard user={user} onLogout={handleLogout} />
+          <AdminDashboard user={user} onLogout={onLogout} />
         ) : (
           <Dashboard 
             user={user} 
-            onLogout={handleLogout}
+            onLogout={onLogout}
             project={null as any}
             onBackToProjects={() => {}}
           />
@@ -149,16 +89,48 @@ const AppContent: React.FC<{ onLoginSuccess: (user: AuthUser) => void }> = ({ on
 
 const App: React.FC = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const { showToast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    checkAuthStatus();
+    // eslint-disable-next-line
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData.data.user);
+      } else {
+        localStorage.removeItem('jwt');
+      }
+    } catch (err) {
+      setError('認証の確認に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = (userData: AuthUser) => {
     setUser(userData);
-    showToast({
-      type: 'success',
-      title: 'ログインしました',
-      message: `${userData.email}としてログインしています`,
-      duration: 3000
-    });
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('jwt');
+    setUser(null);
   };
 
   return (
@@ -166,7 +138,7 @@ const App: React.FC = () => {
       <ToastProvider>
         <Routes>
           <Route path="/auth/callback" element={<AuthCallback onLoginSuccess={handleLogin} />} />
-          <Route path="*" element={<AppContent onLoginSuccess={handleLogin} />} />
+          <Route path="*" element={<AppContent user={user} onLoginSuccess={handleLogin} onLogout={handleLogout} loading={loading} error={error} />} />
         </Routes>
       </ToastProvider>
     </ErrorBoundary>
