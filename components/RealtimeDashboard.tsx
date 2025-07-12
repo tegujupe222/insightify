@@ -1,7 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { websocketService, LiveVisitor, PageView, RealTimeEvent } from '../services/websocket';
+// import { websocketService, LiveVisitor, PageView, RealTimeEvent } from '../services/websocket';
 import { StatCard } from './StatCard';
 import { Icon } from './Icon';
+
+interface LiveVisitor {
+  id: string;
+  projectId: string;
+  sessionId: string;
+  page: string;
+  userAgent: string;
+  ip: string;
+  lastActivity: Date;
+  isActive: boolean;
+}
+
+interface RealTimeEvent {
+  type: 'pageview' | 'click' | 'scroll' | 'custom';
+  projectId: string;
+  sessionId: string;
+  page: string;
+  data: any;
+  timestamp: Date;
+}
+
+interface PageView {
+  id: string;
+  sessionId: string;
+  pageUrl: string;
+  referrer: string;
+  userAgent: string;
+  deviceType: string;
+  browser: string;
+  os: string;
+  timestamp: string;
+}
 
 interface RealtimeDashboardProps {
   projectId: string;
@@ -12,42 +44,24 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
   const [liveVisitors, setLiveVisitors] = useState<LiveVisitor[]>([]);
   const [recentPageViews, setRecentPageViews] = useState<PageView[]>([]);
   const [recentEvents, setRecentEvents] = useState<RealTimeEvent[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Connect to WebSocket
-    websocketService.connect(token, projectId);
-    setIsConnected(websocketService.isConnected());
+    // WebSocket接続は無効化
+    // websocketService.connect(token, projectId);
+    // setIsConnected(websocketService.isConnected());
+    // websocketService.on('pageview', handlePageView);
+    // websocketService.on('event', handleEvent);
+    // return () => { ... };
 
-    // Listen for real-time updates
-    const handlePageView = (pageView: PageView) => {
-      setRecentPageViews(prev => [pageView, ...prev.slice(0, 9)]);
-    };
-
-    const handleEvent = (event: RealTimeEvent) => {
-      setRecentEvents(prev => [event, ...prev.slice(0, 9)]);
-    };
-
-    websocketService.on('pageview', handlePageView);
-    websocketService.on('event', handleEvent);
-
-    // Load initial data
+    // 初回データ取得 & ポーリング
     loadInitialData();
-
-    // Poll for live visitor count every 30 seconds
-    const interval = setInterval(loadInitialData, 30000);
-
-    return () => {
-      websocketService.off('pageview', handlePageView);
-      websocketService.off('event', handleEvent);
-      clearInterval(interval);
-      websocketService.disconnect();
-    };
+    const interval = setInterval(loadInitialData, 10000); // 10秒ごとに取得
+    return () => clearInterval(interval);
   }, [projectId, token]);
 
   const loadInitialData = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/realtime/${projectId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://insightify-eight.vercel.app'}/api/realtime/${projectId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -89,13 +103,9 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
   return (
     <div className="space-y-6">
       {/* Connection Status */}
-      <div className={`flex items-center space-x-2 p-3 rounded-lg ${
-        isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-      }`}>
-        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-        <span className="text-sm font-medium">
-          {isConnected ? 'Live' : 'Disconnected'}
-        </span>
+      <div className={`flex items-center space-x-2 p-3 rounded-lg bg-green-100 text-green-800`}>
+        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+        <span className="text-sm font-medium">Live</span>
       </div>
 
       {/* Live Stats */}
