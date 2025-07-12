@@ -6,6 +6,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     passport.authenticate('google', { failureRedirect: '/' }, (err: any, user: any) => {
       if (err || !user) {
+        console.error('OAuth error:', err, user);
         return res.redirect('/?error=auth_failed');
       }
 
@@ -16,13 +17,13 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
           { expiresIn: '7d' }
         );
 
-        // フロントエンドにリダイレクト
         const frontendUrl = process.env.FRONTEND_URL || 'https://insightify-eight.vercel.app';
         res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
       } catch (error) {
+        console.error('JWT error:', error);
         res.redirect('/?error=token_error');
       }
-    })(req, res);
+    })(req, res); // nextは渡さない
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }
