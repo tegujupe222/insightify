@@ -1,0 +1,393 @@
+import pool from '../config/database';
+import { PageView, Event, Session } from '../types';
+
+export class AnalyticsModel {
+  static async createPageViews(pageViews: any[]): Promise<void> {
+    if (pageViews.length === 0) return;
+
+    const values = pageViews.map((pv, index) => {
+      const offset = index * 8;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`;
+    }).join(', ');
+
+    const query = `
+      INSERT INTO page_views (project_id, session_id, page_url, referrer, user_agent, device_type, browser, os)
+      VALUES ${values}
+    `;
+
+    const flatValues = pageViews.flatMap(pv => [
+      pv.projectId,
+      pv.sessionId,
+      pv.pageUrl,
+      pv.referrer,
+      pv.userAgent,
+      pv.deviceType,
+      pv.browser,
+      pv.os
+    ]);
+
+    await pool.query(query, flatValues);
+  }
+
+  static async createEvents(events: any[]): Promise<void> {
+    if (events.length === 0) return;
+
+    const values = events.map((event, index) => {
+      const offset = index * 5;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
+    }).join(', ');
+
+    const query = `
+      INSERT INTO events (project_id, session_id, event_type, event_data, page_url)
+      VALUES ${values}
+    `;
+
+    const flatValues = events.flatMap(event => [
+      event.projectId,
+      event.sessionId,
+      event.eventType,
+      JSON.stringify(event.eventData),
+      event.pageUrl
+    ]);
+
+    await pool.query(query, flatValues);
+  }
+
+  static async createHeatmapData(heatmapData: any[]): Promise<void> {
+    if (heatmapData.length === 0) return;
+
+    // Use dedicated heatmap_data table for better performance
+    const values = heatmapData.map((hd, index) => {
+      const offset = index * 5;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
+    }).join(', ');
+
+    const query = `
+      INSERT INTO heatmap_data (project_id, page_url, x, y, count)
+      VALUES ${values}
+      ON CONFLICT (project_id, page_url, x, y) 
+      DO UPDATE SET count = heatmap_data.count + EXCLUDED.count
+    `;
+
+    const flatValues = heatmapData.flatMap(hd => [
+      hd.projectId,
+      hd.pageUrl,
+      hd.x,
+      hd.y,
+      hd.count || 1
+    ]);
+
+    await pool.query(query, flatValues);
+  }
+
+  static async updateSessionData(projectId: string, pageViews: any[], events: any[]): Promise<void> {
+    // Group by session
+    const sessionMap = new Map<string, { pageViews: any[], events: any[] }>();
+    
+    pageViews.forEach(pv => {
+      if (!sessionMap.has(pv.sessionId)) {
+        sessionMap.set(pv.sessionId, { pageViews: [], events: [] });
+      }
+      sessionMap.get(pv.sessionId)!.pageViews.push(pv);
+    });
+
+    events.forEach(event => {
+      if (!sessionMap.has(event.sessionId)) {
+        sessionMap.set(event.sessionId, { pageViews: [], events: [] });
+      }
+      sessionMap.get(event.sessionId)!.events.push(event);
+    });
+
+    // Update or create sessions
+    for (const [sessionId, data] of sessionMap) {
+      const query = `
+        INSERT INTO sessions (project_id, visitor_id, page_views, events, device_type, browser, os)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (id) DO UPDATE SET
+          page_views = sessions.page_views + $3,
+          events = sessions.events + $4,
+          end_time = NOW()
+      `;
+
+      const firstPageView = data.pageViews[0];
+      const values = [
+        projectId,
+        sessionId, // Using sessionId as visitorId for now
+        data.pageViews.length,
+        data.events.length,
+        firstPageView?.deviceType || 'unknown',
+        firstPageView?.browser || 'unknown',
+        firstPageView?.os || 'unknown'
+      ];
+
+      await pool.query(query, values);
+    }
+  }
+
+  static async getSummary(projectId: string, startDate: Date, endDate: Date): Promise<any> {
+    // Use materialized view for better performance
+    const query = `
+      SELECT 
+        COALESCE(SUM(page_views), 0) as total_page_views,
+        COALESCE(SUM(sessions), 0) as unique_sessions,
+        COALESCE(SUM(unique_visitors), 0) as unique_visitors
+      FROM daily_analytics
+      WHERE project_id = $1 
+        AND date BETWEEN $2 AND $3
+    `;
+
+    const result = await pool.query(query, [projectId, startDate, endDate]);
+    const summary = result.rows[0];
+
+    // Calculate bounce rate (sessions with only 1 page view)
+    const bounceQuery = `
+      SELECT COUNT(*) as bounce_sessions
+      FROM sessions s
+      WHERE s.project_id = $1 
+        AND s.start_time BETWEEN $2 AND $3
+        AND s.page_views = 1
+    `;
+
+    const bounceResult = await pool.query(bounceQuery, [projectId, startDate, endDate]);
+    const bounceRate = summary.unique_sessions > 0 
+      ? (bounceResult.rows[0].bounce_sessions / summary.unique_sessions) * 100 
+      : 0;
+
+    // Calculate average session duration
+    const durationQuery = `
+      SELECT AVG(EXTRACT(EPOCH FROM (end_time - start_time))) as avg_duration
+      FROM sessions
+      WHERE project_id = $1 
+        AND start_time BETWEEN $2 AND $3
+        AND end_time IS NOT NULL
+    `;
+
+    const durationResult = await pool.query(durationQuery, [projectId, startDate, endDate]);
+
+    return {
+      totalPageViews: parseInt(summary.total_page_views) || 0,
+      uniqueSessions: parseInt(summary.unique_sessions) || 0,
+      uniqueVisitors: parseInt(summary.unique_visitors) || 0,
+      bounceRate: Math.round(bounceRate * 100) / 100,
+      averageSessionDuration: Math.round(durationResult.rows[0]?.avg_duration || 0),
+      averagePageViewsPerSession: summary.unique_sessions > 0 
+        ? Math.round((summary.total_page_views / summary.unique_sessions) * 100) / 100 
+        : 0
+    };
+  }
+
+  static async getTimeSeriesData(projectId: string, startDate: Date, endDate: Date, period: string): Promise<any[]> {
+    // Use materialized view for better performance
+    const query = `
+      SELECT 
+        date,
+        page_views,
+        sessions,
+        unique_visitors
+      FROM daily_analytics
+      WHERE project_id = $1 
+        AND date BETWEEN $2 AND $3
+      ORDER BY date
+    `;
+
+    const result = await pool.query(query, [projectId, startDate, endDate]);
+    return result.rows.map(row => ({
+      date: row.date,
+      pageViews: parseInt(row.page_views) || 0,
+      sessions: parseInt(row.sessions) || 0,
+      uniqueVisitors: parseInt(row.unique_visitors) || 0
+    }));
+  }
+
+  static async getTopPages(projectId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    const query = `
+      SELECT 
+        page_url,
+        COUNT(*) as views,
+        COUNT(DISTINCT session_id) as sessions
+      FROM page_views
+      WHERE project_id = $1 
+        AND timestamp BETWEEN $2 AND $3
+      GROUP BY page_url
+      ORDER BY views DESC
+      LIMIT 10
+    `;
+
+    const result = await pool.query(query, [projectId, startDate, endDate]);
+    return result.rows.map(row => ({
+      url: row.page_url,
+      views: parseInt(row.views) || 0,
+      sessions: parseInt(row.sessions) || 0
+    }));
+  }
+
+  static async getTrafficSources(projectId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    const query = `
+      SELECT 
+        CASE 
+          WHEN referrer = 'direct' OR referrer = '' THEN 'Direct'
+          WHEN referrer LIKE '%google%' THEN 'Google'
+          WHEN referrer LIKE '%facebook%' THEN 'Facebook'
+          WHEN referrer LIKE '%twitter%' OR referrer LIKE '%x.com%' THEN 'Twitter'
+          WHEN referrer LIKE '%linkedin%' THEN 'LinkedIn'
+          WHEN referrer LIKE '%github%' THEN 'GitHub'
+          ELSE 'Other'
+        END as source,
+        COUNT(DISTINCT session_id) as visitors
+      FROM page_views
+      WHERE project_id = $1 
+        AND timestamp BETWEEN $2 AND $3
+      GROUP BY source
+      ORDER BY visitors DESC
+    `;
+
+    const result = await pool.query(query, [projectId, startDate, endDate]);
+    return result.rows.map(row => ({
+      source: row.source,
+      visitors: parseInt(row.visitors) || 0
+    }));
+  }
+
+  static async getDeviceBreakdown(projectId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    const query = `
+      SELECT 
+        device_type,
+        COUNT(DISTINCT session_id) as sessions
+      FROM page_views
+      WHERE project_id = $1 
+        AND timestamp BETWEEN $2 AND $3
+        AND device_type IS NOT NULL
+      GROUP BY device_type
+      ORDER BY sessions DESC
+    `;
+
+    const result = await pool.query(query, [projectId, startDate, endDate]);
+    const total = result.rows.reduce((sum, row) => sum + parseInt(row.sessions), 0);
+
+    return result.rows.map(row => ({
+      device: row.device_type,
+      sessions: parseInt(row.sessions) || 0,
+      percentage: total > 0 ? Math.round((parseInt(row.sessions) / total) * 100) : 0
+    }));
+  }
+
+  static async getHeatmapData(projectId: string, pageUrl: string, startDate: Date, endDate: Date): Promise<any[]> {
+    const query = `
+      SELECT 
+        x,
+        y,
+        SUM(count) as count
+      FROM heatmap_data
+      WHERE project_id = $1 
+        AND page_url = $2
+        AND timestamp BETWEEN $3 AND $4
+      GROUP BY x, y
+      ORDER BY count DESC
+    `;
+
+    const result = await pool.query(query, [projectId, pageUrl, startDate, endDate]);
+    return result.rows.map(row => ({
+      x: parseInt(row.x) || 0,
+      y: parseInt(row.y) || 0,
+      count: parseInt(row.count) || 0
+    }));
+  }
+
+  static async getLiveVisitors(projectId: string): Promise<number> {
+    const query = `
+      SELECT COUNT(DISTINCT session_id) as live_visitors
+      FROM page_views
+      WHERE project_id = $1 
+        AND timestamp > NOW() - INTERVAL '5 minutes'
+    `;
+
+    const result = await pool.query(query, [projectId]);
+    return parseInt(result.rows[0]?.live_visitors) || 0;
+  }
+
+  // Optimized method for real-time analytics
+  static async getRealTimeStats(projectId: string): Promise<any> {
+    const query = `
+      SELECT 
+        COUNT(DISTINCT pv.session_id) as active_sessions,
+        COUNT(DISTINCT pv.id) as page_views_last_hour,
+        COUNT(DISTINCT e.id) as events_last_hour
+      FROM page_views pv
+      LEFT JOIN events e ON pv.session_id = e.session_id 
+        AND e.timestamp > NOW() - INTERVAL '1 hour'
+      WHERE pv.project_id = $1 
+        AND pv.timestamp > NOW() - INTERVAL '1 hour'
+    `;
+
+    const result = await pool.query(query, [projectId]);
+    const stats = result.rows[0];
+
+    return {
+      activeSessions: parseInt(stats.active_sessions) || 0,
+      pageViewsLastHour: parseInt(stats.page_views_last_hour) || 0,
+      eventsLastHour: parseInt(stats.events_last_hour) || 0
+    };
+  }
+
+  // Get recent page views for real-time updates
+  static async getRecentPageViews(projectId: string, since: Date): Promise<any[]> {
+    const query = `
+      SELECT 
+        pv.id,
+        pv.session_id,
+        pv.page_url,
+        pv.referrer,
+        pv.user_agent,
+        pv.device_type,
+        pv.browser,
+        pv.os,
+        pv.timestamp
+      FROM page_views pv
+      WHERE pv.project_id = $1 
+        AND pv.timestamp > $2
+      ORDER BY pv.timestamp DESC
+      LIMIT 50
+    `;
+
+    const result = await pool.query(query, [projectId, since]);
+    return result.rows.map(row => ({
+      id: row.id,
+      sessionId: row.session_id,
+      pageUrl: row.page_url,
+      referrer: row.referrer,
+      userAgent: row.user_agent,
+      deviceType: row.device_type,
+      browser: row.browser,
+      os: row.os,
+      timestamp: row.timestamp
+    }));
+  }
+
+  // Get recent events for real-time updates
+  static async getRecentEvents(projectId: string, since: Date): Promise<any[]> {
+    const query = `
+      SELECT 
+        e.id,
+        e.session_id,
+        e.event_type,
+        e.event_data,
+        e.page_url,
+        e.timestamp
+      FROM events e
+      WHERE e.project_id = $1 
+        AND e.timestamp > $2
+      ORDER BY e.timestamp DESC
+      LIMIT 50
+    `;
+
+    const result = await pool.query(query, [projectId, since]);
+    return result.rows.map(row => ({
+      id: row.id,
+      sessionId: row.session_id,
+      eventType: row.event_type,
+      eventData: row.event_data,
+      pageUrl: row.page_url,
+      timestamp: row.timestamp
+    }));
+  }
+} 
