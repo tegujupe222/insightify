@@ -1,8 +1,9 @@
 // Service Worker for Insightify PWA
-const CACHE_VERSION = 'v1.0.3'; // デプロイごとに上げる
+const CACHE_VERSION = 'v1.0.4'; // デプロイごとに上げる
 const CACHE_NAME = `insightify-cache-${CACHE_VERSION}`;
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       console.log('Opened cache');
@@ -25,6 +26,7 @@ self.addEventListener('activate', event => {
       )
     )
   );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
