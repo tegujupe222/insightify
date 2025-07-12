@@ -15,7 +15,7 @@ export const createRateLimit = (windowMs: number, max: number, message?: string)
     },
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (req: Request, res: Response) => {
+    handler: (_req: Request, res: Response) => {
       res.status(429).json({
         success: false,
         error: 'Rate limit exceeded',
@@ -231,7 +231,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
 };
 
 // セキュリティ監査ログ
-export const securityAuditLog = (req: Request, res: Response, next: NextFunction) => {
+export const securityAuditLog = (req: Request, _res: Response, next: NextFunction) => {
   const suspiciousPatterns = [
     /<script/i,
     /javascript:/i,

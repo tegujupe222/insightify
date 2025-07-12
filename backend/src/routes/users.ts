@@ -5,7 +5,7 @@ import { validateInput, commonValidations } from '../middleware/security';
 const router = Router();
 
 // 全ユーザー取得（管理者のみ）
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const users = await UserModel.findAll();
     res.json({
@@ -123,7 +123,7 @@ router.get('/near-limit/:threshold?', async (req, res) => {
 });
 
 // 制限に達したユーザー取得
-router.get('/at-limit/all', async (req, res) => {
+router.get('/at-limit/all', async (_req, res) => {
   try {
     const users = await UserModel.getUsersAtLimit();
     

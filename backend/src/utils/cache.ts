@@ -161,11 +161,6 @@ class CacheManager {
   // キャッシュの永続化（簡略版）
   async persist(): Promise<void> {
     try {
-      const data = {
-        entries: Array.from(this.cache.entries()),
-        timestamp: Date.now()
-      };
-      
       // 実際の実装ではファイルやRedisに保存
       logger.debug('Cache persisted', { size: this.cache.size });
     } catch (error) {

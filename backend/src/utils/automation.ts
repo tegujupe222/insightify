@@ -115,7 +115,7 @@ class AutomationManager {
       return null;
     }
     
-    const [minute, hour, day, month, weekday] = parts;
+    const [minute, hour, day, _month, _weekday] = parts;
     
     // 基本的なパターンのみ対応
     if (minute === '*/5') return 5 * 60 * 1000; // 5分

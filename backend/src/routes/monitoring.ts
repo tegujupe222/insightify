@@ -6,7 +6,7 @@ import pool from '../config/database';
 const router = Router();
 
 // システムヘルスチェック
-router.get('/health', async (req, res) => {
+router.get('/health', async (_req, res) => {
   try {
     const startTime = Date.now();
     
@@ -49,7 +49,7 @@ router.get('/health', async (req, res) => {
 });
 
 // システム統計
-router.get('/stats', async (req, res) => {
+router.get('/stats', async (_req, res) => {
   try {
     // ユーザー統計
     const userStats = await pool.query(`
