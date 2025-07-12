@@ -1,5 +1,5 @@
 // Service Worker for Insightify PWA
-const CACHE_NAME = 'insightify-v1';
+const CACHE_NAME = 'insightify-v2';
 const urlsToCache = [
   '/',
   '/index.html',

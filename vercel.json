@@ -1,5 +1,11 @@
 {
   "rewrites": [
-    { "source": "/((?!assets|favicon.ico|robots.txt|service-worker.js).*)", "destination": "/" }
-  ]
+    { "source": "/api/(.*)", "destination": "/backend/api/$1" },
+    { "source": "/((?!api|assets|favicon.ico|robots.txt|sw.js|manifest.json).*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "backend/api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  }
 } 
