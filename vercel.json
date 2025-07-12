@@ -2,41 +2,21 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/src/index.ts",
-      "use": "@vercel/node"
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "backend/src/index.ts"
-    }
-  ],
-  "functions": {
-    "backend/src/index.ts": {
-      "maxDuration": 30
-    }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/daily",
-      "schedule": "0 9 * * *"
+      "dest": "/api/$1"
     },
     {
-      "path": "/api/cron/monthly",
-      "schedule": "0 9 1 * *"
-    },
-    {
-      "path": "/api/cron/send-upgrade-recommendations",
-      "schedule": "0 10 * * 1"
-    },
-    {
-      "path": "/api/cron/send-limit-warnings",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/clean-notifications",
-      "schedule": "0 2 * * 0"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "env": {

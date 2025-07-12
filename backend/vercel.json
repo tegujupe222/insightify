@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/index.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/src/index.ts"
+    }
+  ],
+  "functions": {
+    "src/index.ts": {
+      "maxDuration": 30
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/daily",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/monthly",
+      "schedule": "0 9 1 * *"
+    },
+    {
+      "path": "/api/cron/send-upgrade-recommendations",
+      "schedule": "0 10 * * 1"
+    },
+    {
+      "path": "/api/cron/send-limit-warnings",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/clean-notifications",
+      "schedule": "0 2 * * 0"
+    }
+  ]
+} 
