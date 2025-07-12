@@ -7,8 +7,10 @@ import { ToastProvider, useToast } from './components/Toast';
 import { SkipLink, LoadingAnnouncer, ErrorAnnouncer } from './components/Accessibility';
 import { Icon } from './components/Icon';
 import type { AuthUser } from './types';
+import { Routes, Route } from 'react-router-dom';
+import { AuthCallback } from './components/AuthCallback';
 
-const AppContent: React.FC = () => {
+const AppContent: React.FC<{ onLoginSuccess: (user: AuthUser) => void }> = ({ onLoginSuccess }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,15 +69,9 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleLogin = async (userData: AuthUser) => {
-    setUser(userData);
-    showToast({
-      type: 'success',
-      title: 'ログインしました',
-      message: `${userData.email}としてログインしています`,
-      duration: 3000
-    });
-  };
+  useEffect(() => {
+    if (user) setLoading(false);
+  }, [user]);
 
   const handleLogout = () => {
     localStorage.removeItem('jwt');
@@ -127,7 +123,7 @@ const AppContent: React.FC = () => {
   }
 
   if (!user) {
-    return <Login onLoginSuccess={handleLogin} />;
+    return <Login onLoginSuccess={onLoginSuccess} />;
   }
 
   return (
@@ -135,7 +131,6 @@ const AppContent: React.FC = () => {
       <SkipLink />
       <LoadingAnnouncer isLoading={loading} />
       <ErrorAnnouncer error={error} />
-      
       <main id="main-content">
         {user.role === 'admin' ? (
           <AdminDashboard user={user} onLogout={handleLogout} />
@@ -153,10 +148,26 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const { showToast } = useToast();
+
+  const handleLogin = (userData: AuthUser) => {
+    setUser(userData);
+    showToast({
+      type: 'success',
+      title: 'ログインしました',
+      message: `${userData.email}としてログインしています`,
+      duration: 3000
+    });
+  };
+
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <AppContent />
+        <Routes>
+          <Route path="/auth/callback" element={<AuthCallback onLoginSuccess={handleLogin} />} />
+          <Route path="*" element={<AppContent onLoginSuccess={handleLogin} />} />
+        </Routes>
       </ToastProvider>
     </ErrorBoundary>
   );
