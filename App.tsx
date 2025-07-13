@@ -13,9 +13,10 @@ import { ThemeProvider } from './contexts/ThemeContext';
 
 const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthUser) => void; onLogout: () => void; loading: boolean; error: string | null; }> = ({ user, onLoginSuccess, onLogout, loading, error }) => {
   const { showToast } = useToast();
+  const prevUserRef = React.useRef<AuthUser | null>(null);
 
   useEffect(() => {
-    if (user) {
+    if (!prevUserRef.current && user) {
       showToast({
         type: 'success',
         title: 'ログインしました',
@@ -23,6 +24,7 @@ const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthU
         duration: 3000
       });
     }
+    prevUserRef.current = user;
   }, [user, showToast]);
 
   if (loading) {
