@@ -5,6 +5,8 @@ import { useToast } from './Toast';
 import type { Project, AuthUser } from '../types';
 import { Navigation } from './Navigation';
 import { Icon } from './Icon';
+import { InviteUserModal } from './InviteUserModal';
+import { ProjectMembersModal } from './ProjectMembersModal';
 
 interface ProjectListProps {
   projects: Project[];
@@ -27,6 +29,9 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   const { isDark } = useTheme();
   const { showToast } = useToast();
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const handleDeleteProject = async (project: Project) => {
     if (!window.confirm(`プロジェクト「${project.name}」を削除しますか？この操作は取り消せません。`)) {
@@ -52,6 +57,65 @@ export const ProjectList: React.FC<ProjectListProps> = ({
     } finally {
       setDeletingProjectId(null);
     }
+  };
+
+  const handleInviteUser = async (email: string, role: string, message: string) => {
+    if (!selectedProject) return;
+
+    try {
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        throw new Error('認証トークンが見つかりません');
+      }
+
+      const response = await fetch('/api/invitations/create', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          projectId: selectedProject.id,
+          email,
+          role,
+          message
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '招待の送信に失敗しました');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        showToast({
+          type: 'success',
+          title: '招待送信完了',
+          message: `${email}に招待メールを送信しました`,
+          duration: 5000
+        });
+      } else {
+        throw new Error(data.error || '招待の送信に失敗しました');
+      }
+    } catch (error) {
+      console.error('招待送信エラー:', error);
+      showToast({
+        type: 'error',
+        title: '招待エラー',
+        message: error instanceof Error ? error.message : '招待の送信に失敗しました',
+        duration: 5000
+      });
+    }
+  };
+
+  const handleShowMembers = (project: Project) => {
+    setSelectedProject(project);
+    setShowMembersModal(true);
+  };
+
+  const handleShowInvite = () => {
+    setShowInviteModal(true);
   };
 
   return (
@@ -139,21 +203,58 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                     </span>
                   </div>
                 </div>
-                <button 
-                  onClick={() => onSelectProject(project)} 
-                  className={`mt-6 w-full font-semibold py-2 px-4 rounded-lg transition-colors duration-150 ${
-                    isDark 
-                      ? 'bg-gray-700 hover:bg-indigo-600 text-white' 
-                      : 'bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-700'
-                  }`}
-                >
-                  {t('common.view')} {t('common.dashboard')}
-                </button>
+                <div className="mt-6 space-y-2">
+                  <button 
+                    onClick={() => onSelectProject(project)} 
+                    className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors duration-150 ${
+                      isDark 
+                        ? 'bg-gray-700 hover:bg-indigo-600 text-white' 
+                        : 'bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-700'
+                    }`}
+                  >
+                    {t('common.view')} {t('common.dashboard')}
+                  </button>
+                  
+                  {/* プロジェクト所有者または編集者のみ表示 */}
+                  {(project.userRole === 'owner' || project.userRole === 'editor') && (
+                    <button 
+                      onClick={() => handleShowMembers(project)}
+                      className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors duration-150 ${
+                        isDark 
+                          ? 'bg-gray-600 hover:bg-gray-500 text-white' 
+                          : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <Icon name="users" className="h-4 w-4 inline mr-2" />
+                      Members
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </main>
+
+      {/* 招待モーダル */}
+      {showInviteModal && selectedProject && (
+        <InviteUserModal
+          projectId={selectedProject.id}
+          projectName={selectedProject.name}
+          onClose={() => setShowInviteModal(false)}
+          onInvite={handleInviteUser}
+        />
+      )}
+
+      {/* メンバー管理モーダル */}
+      {showMembersModal && selectedProject && (
+        <ProjectMembersModal
+          projectId={selectedProject.id}
+          projectName={selectedProject.name}
+          onClose={() => setShowMembersModal(false)}
+          onInviteUser={handleShowInvite}
+        />
+      )}
     </div>
   );
 };

@@ -13,6 +13,7 @@ import type { AuthUser, Project } from './types';
 import { Routes, Route } from 'react-router-dom';
 import { AuthCallback } from './components/AuthCallback';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { InviteAcceptPage } from './components/InviteAcceptPage';
 
 const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthUser) => void; onLogout: () => void; loading: boolean; error: string | null; }> = ({ user, onLoginSuccess, onLogout, loading, error }) => {
   const { showToast } = useToast();
@@ -362,6 +363,7 @@ const App: React.FC = () => {
         <ToastProvider>
           <Routes>
             <Route path="/auth/callback" element={<AuthCallback onLoginSuccess={handleLogin} />} />
+            <Route path="/invite/:token" element={<InviteAcceptPage />} />
             <Route path="*" element={<AppContent user={user} onLoginSuccess={handleLogin} onLogout={handleLogout} loading={loading} error={error} />} />
           </Routes>
         </ToastProvider>
