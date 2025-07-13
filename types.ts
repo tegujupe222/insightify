@@ -39,6 +39,8 @@ export interface Project {
   url: string;
   domains?: string[];
   trackingCode: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export type UserRole = 'admin' | 'user';

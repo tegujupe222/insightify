@@ -4,7 +4,7 @@ import { Icon } from './Icon';
 import { UserManagementTable } from './UserManagementTable';
 import { SubscriptionManagementTable } from './SubscriptionManagementTable';
 import { NotificationManagementTable } from './NotificationManagementTable';
-import { getMockUsers } from '../services/mockData';
+import { useToast } from './Toast';
 import type { AuthUser, User } from '../types';
 
 interface AdminDashboardProps {
@@ -18,20 +18,95 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<AdminTab>('users');
+    const { showToast } = useToast();
 
     useEffect(() => {
         const fetchUsers = async () => {
-            setLoading(true);
-            const mockUsers = await getMockUsers();
-            setUsers(mockUsers);
-            setLoading(false);
+            try {
+                setLoading(true);
+                const token = localStorage.getItem('jwt');
+                if (!token) {
+                    throw new Error('認証トークンが見つかりません');
+                }
+
+                const response = await fetch('/api/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('ユーザー一覧の取得に失敗しました');
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    setUsers(result.data);
+                } else {
+                    throw new Error(result.error || 'ユーザー一覧の取得に失敗しました');
+                }
+            } catch (error) {
+                console.error('Failed to fetch users:', error);
+                showToast({
+                    type: 'error',
+                    title: 'エラー',
+                    message: error instanceof Error ? error.message : 'ユーザー一覧の取得に失敗しました',
+                    duration: 5000
+                });
+                
+                // エラー時は空の配列を設定
+                setUsers([]);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchUsers();
-    }, []);
+    }, [showToast]);
 
-    const handleDeleteUser = (userId: string) => {
-        if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+    const handleDeleteUser = async (userId: string) => {
+        if (!window.confirm('このユーザーを削除しますか？この操作は取り消せません。')) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('jwt');
+            if (!token) {
+                throw new Error('認証トークンが見つかりません');
+            }
+
+            const response = await fetch(`/api/admin/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('ユーザーの削除に失敗しました');
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+                showToast({
+                    type: 'success',
+                    title: '削除完了',
+                    message: 'ユーザーが削除されました',
+                    duration: 3000
+                });
+            } else {
+                throw new Error(result.error || 'ユーザーの削除に失敗しました');
+            }
+        } catch (error) {
+            console.error('Failed to delete user:', error);
+            showToast({
+                type: 'error',
+                title: '削除エラー',
+                message: error instanceof Error ? error.message : 'ユーザーの削除に失敗しました',
+                duration: 5000
+            });
         }
     };
 

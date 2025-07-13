@@ -10,7 +10,7 @@ import { LiveVisitors } from './LiveVisitors';
 import { RealtimeDashboard } from './RealtimeDashboard';
 import { SubscriptionUpgrade } from './SubscriptionUpgrade';
 import { Icon } from './Icon';
-import { getMockAnalyticsData } from '../services/mockData';
+import { useToast } from './Toast';
 import type { AnalyticsData, Project, AuthUser } from '../types';
 import { HeatmapPage } from './HeatmapPage';
 
@@ -24,6 +24,7 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjects, user }) => {
   const { t } = useTranslation();
   const { isDark } = useTheme();
+  const { showToast } = useToast();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -37,20 +38,63 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!project?.id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        // In a real app, you would fetch data for project.id
-        const result = await getMockAnalyticsData();
-        setData(result);
+        const token = localStorage.getItem('jwt');
+        if (!token) {
+          throw new Error('認証トークンが見つかりません');
+        }
+
+        const response = await fetch(`/api/analytics/${project.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('アナリティクスデータの取得に失敗しました');
+        }
+
+        const result = await response.json();
+        if (result.success) {
+          setData(result.data);
+        } else {
+          throw new Error(result.error || 'アナリティクスデータの取得に失敗しました');
+        }
       } catch (error) {
         console.error("Failed to fetch analytics data:", error);
+        showToast({
+          type: 'error',
+          title: 'エラー',
+          message: error instanceof Error ? error.message : 'アナリティクスデータの取得に失敗しました',
+          duration: 5000
+        });
+        
+        // エラー時はダミーデータを表示（フォールバック）
+        setData({
+          kpis: {
+            pageViews: { value: '0', change: '0%' },
+            uniqueUsers: { value: '0', change: '0%' },
+            bounceRate: { value: '0%', change: '0%' },
+          },
+          liveVisitors: 0,
+          visitorData: [],
+          sources: [],
+          deviceData: [],
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [project]);
+  }, [project, showToast]);
 
   const handleUpgrade = (planType: 'monthly' | 'yearly') => {
     // Mock implementation - replace with actual API call

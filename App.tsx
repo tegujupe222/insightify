@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import { Login } from './components/Login';
 import { AdminDashboard } from './components/AdminDashboard';
+import { ProjectList } from './components/ProjectList';
+import { AddProjectModal } from './components/AddProjectModal';
+import { TrackingCodeModal } from './components/TrackingCodeModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider, useToast } from './components/Toast';
 import { SkipLink, LoadingAnnouncer, ErrorAnnouncer } from './components/Accessibility';
 import { Icon } from './components/Icon';
-import type { AuthUser } from './types';
+import type { AuthUser, Project } from './types';
 import { Routes, Route } from 'react-router-dom';
 import { AuthCallback } from './components/AuthCallback';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -14,6 +17,12 @@ import { ThemeProvider } from './contexts/ThemeContext';
 const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthUser) => void; onLogout: () => void; loading: boolean; error: string | null; }> = ({ user, onLoginSuccess, onLogout, loading, error }) => {
   const { showToast } = useToast();
   const prevUserRef = React.useRef<AuthUser | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+  const [showTrackingCodeModal, setShowTrackingCodeModal] = useState(false);
+  const [newlyCreatedProject, setNewlyCreatedProject] = useState<Project | null>(null);
+  const [projectsLoading, setProjectsLoading] = useState(false);
 
   useEffect(() => {
     if (!prevUserRef.current && user) {
@@ -26,6 +35,147 @@ const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthU
     }
     prevUserRef.current = user;
   }, [user, showToast]);
+
+  useEffect(() => {
+    if (user) {
+      fetchProjects();
+    }
+  }, [user]);
+
+  const fetchProjects = async () => {
+    try {
+      setProjectsLoading(true);
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        throw new Error('認証トークンが見つかりません');
+      }
+
+      const response = await fetch('/api/projects', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('プロジェクトの取得に失敗しました');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setProjects(data.data.data || []);
+      } else {
+        throw new Error(data.error || 'プロジェクトの取得に失敗しました');
+      }
+    } catch (error) {
+      console.error('プロジェクト取得エラー:', error);
+      showToast({
+        type: 'error',
+        title: 'エラー',
+        message: error instanceof Error ? error.message : 'プロジェクトの取得に失敗しました',
+        duration: 5000
+      });
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
+
+  const handleAddProject = async (name: string, url: string) => {
+    try {
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        throw new Error('認証トークンが見つかりません');
+      }
+
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, url })
+      });
+
+      if (!response.ok) {
+        throw new Error('プロジェクトの作成に失敗しました');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        showToast({
+          type: 'success',
+          title: '成功',
+          message: 'プロジェクトが作成されました',
+          duration: 3000
+        });
+        setShowAddProjectModal(false);
+        
+        // 新しく作成されたプロジェクトを保存
+        setNewlyCreatedProject(data.data.project);
+        setShowTrackingCodeModal(true);
+        
+        fetchProjects(); // プロジェクト一覧を再取得
+      } else {
+        throw new Error(data.error || 'プロジェクトの作成に失敗しました');
+      }
+    } catch (error) {
+      console.error('プロジェクト作成エラー:', error);
+      showToast({
+        type: 'error',
+        title: 'エラー',
+        message: error instanceof Error ? error.message : 'プロジェクトの作成に失敗しました',
+        duration: 5000
+      });
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        throw new Error('認証トークンが見つかりません');
+      }
+
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('プロジェクトの削除に失敗しました');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        // 現在選択されているプロジェクトが削除された場合、選択を解除
+        if (selectedProject?.id === projectId) {
+          setSelectedProject(null);
+        }
+        fetchProjects(); // プロジェクト一覧を再取得
+      } else {
+        throw new Error(data.error || 'プロジェクトの削除に失敗しました');
+      }
+    } catch (error) {
+      console.error('プロジェクト削除エラー:', error);
+      throw error; // エラーを再スローして、呼び出し元でハンドリング
+    }
+  };
+
+  const handleSelectProject = (project: Project) => {
+    setSelectedProject(project);
+  };
+
+  const handleBackToProjects = () => {
+    setSelectedProject(null);
+  };
+
+  const handleCloseTrackingCodeModal = () => {
+    setShowTrackingCodeModal(false);
+    setNewlyCreatedProject(null);
+  };
 
   if (loading) {
     return (
@@ -69,6 +219,26 @@ const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthU
     return <Login onLoginSuccess={onLoginSuccess} />;
   }
 
+  // プロジェクトが選択されている場合はダッシュボードを表示
+  if (selectedProject) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <SkipLink />
+        <LoadingAnnouncer isLoading={loading} />
+        <ErrorAnnouncer error={error} />
+        <main id="main-content">
+          <Dashboard 
+            user={user} 
+            onLogout={onLogout}
+            project={selectedProject}
+            onBackToProjects={handleBackToProjects}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // プロジェクト一覧を表示
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <SkipLink />
@@ -78,25 +248,28 @@ const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthU
         {user.role === 'admin' ? (
           <AdminDashboard user={user} onLogout={onLogout} />
         ) : (
-          <Dashboard 
-            user={user} 
-            onLogout={onLogout}
-            project={{
-              id: 'default',
-              name: 'Default Project',
-              url: window.location.origin,
-              trackingCode: 'default-tracking-code'
-            }}
-            onBackToProjects={() => {
-              // For now, just show a toast message since we don't have a project list page
-              showToast({
-                type: 'info',
-                title: 'プロジェクト一覧',
-                message: 'プロジェクト一覧機能は現在開発中です',
-                duration: 3000
-              });
-            }}
-          />
+          <>
+            <ProjectList 
+              projects={projects}
+              onSelectProject={handleSelectProject}
+              onAddNewProject={() => setShowAddProjectModal(true)}
+              onLogout={onLogout}
+              user={user}
+              onDeleteProject={handleDeleteProject}
+            />
+            {showAddProjectModal && (
+              <AddProjectModal
+                onAddProject={handleAddProject}
+                onClose={() => setShowAddProjectModal(false)}
+              />
+            )}
+            {showTrackingCodeModal && newlyCreatedProject && (
+              <TrackingCodeModal
+                project={newlyCreatedProject}
+                onClose={handleCloseTrackingCodeModal}
+              />
+            )}
+          </>
         )}
       </main>
     </div>
