@@ -11,10 +11,11 @@ export const Login: React.FC<{ onLoginSuccess: (user: any) => void }> = ({ onLog
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 w-full max-w-md">
-        <div className="flex justify-center mb-6">
-          <img src="/logo.png" alt="Logo" className="h-20 w-20 rounded-full shadow" />
+        <div className="flex flex-col items-center mb-6">
+          <img src="/logo.png" alt="Logo" className="h-20 w-20 rounded-full shadow mb-2" />
+          <span className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Insightify</span>
+          <span className="text-sm text-gray-500 dark:text-gray-300 text-center">あなたのWebサイトを“見える化”する次世代アナリティクス</span>
         </div>
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white">ログイン</h2>
         {error && (
           <div className="mb-4 text-red-600 text-center">{error}</div>
         )}

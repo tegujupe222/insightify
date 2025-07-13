@@ -14,6 +14,10 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthCallback } from './components/AuthCallback';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { InviteAcceptPage } from './components/InviteAcceptPage';
+import { Footer } from './components/Footer';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import CancelPolicy from './components/CancelPolicy';
+import Terms from './components/Terms';
 
 const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthUser) => void; onLogout: () => void; loading: boolean; error: string | null; }> = ({ user, onLoginSuccess, onLogout, loading, error }) => {
   const { showToast } = useToast();
@@ -360,7 +364,10 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/auth/callback" element={<AuthCallback onLoginSuccess={handleLogin} />} />
             <Route path="/invite/:token" element={<InviteAcceptPage />} />
-            <Route path="*" element={<AppContent user={user} onLoginSuccess={handleLogin} onLogout={handleLogout} loading={loading} error={error} />} />
+            <Route path="/privacy-policy" element={<><PrivacyPolicy /><Footer /></>} />
+            <Route path="/cancel-policy" element={<><CancelPolicy /><Footer /></>} />
+            <Route path="/terms" element={<><Terms /><Footer /></>} />
+            <Route path="*" element={<><AppContent user={user} onLoginSuccess={handleLogin} onLogout={handleLogout} loading={loading} error={error} /><Footer /></>} />
           </Routes>
         </ToastProvider>
       </ErrorBoundary>
