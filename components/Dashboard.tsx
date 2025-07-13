@@ -135,7 +135,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
         onLogout={onLogout}
         user={user}
       />
-      <main className="pt-16 p-4 sm:p-6 lg:p-8 max-w-screen-2xl mx-auto">
+      <main className="pt-16 md:pt-16 md:ml-64 p-4 sm:p-6 lg:p-8 max-w-screen-2xl mx-auto">
          <div className="mb-6">
             <button onClick={onBackToProjects} className={`flex items-center text-sm font-medium transition-colors duration-150 ${
               isDark ? 'text-gray-400 hover:text-indigo-400' : 'text-gray-600 hover:text-indigo-600'

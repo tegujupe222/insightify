@@ -62,7 +62,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
         onLogout={onLogout}
         user={user}
       />
-      <main className="pt-16 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="pt-16 md:pt-16 md:ml-64 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
             {t('projects.title')}

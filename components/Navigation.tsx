@@ -45,58 +45,58 @@ export const Navigation: React.FC<NavigationProps> = ({
   // サイドバーの幅
   const sidebarWidth = 'w-64';
 
-  return (
+  // サイドバーの内容を共通化
+  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <>
-      {/* サイドバー本体 */}
-      <nav
-        className={`fixed top-0 left-0 h-screen z-40 flex flex-col ${sidebarWidth} transition-colors duration-200
-          ${isDark ? 'bg-gray-900 border-r border-gray-700 text-white' : 'bg-white border-r border-gray-200 text-gray-900'}`}
-      >
-        {/* ロゴ */}
-        <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <Icon name="barChart" className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold">Insightify</span>
+      {/* ロゴ */}
+      <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <Icon name="barChart" className="w-5 h-5 text-white" />
           </div>
+          <span className="text-xl font-bold">Insightify</span>
         </div>
+      </div>
 
-        {/* メニュー */}
-        <div className="flex-1 flex flex-col py-4 space-y-1">
-          {navigationItems.map((item) => (
-            <button
-              key={item.key}
-              onClick={() => onNavigate(item.key)}
-              className={`flex items-center px-6 py-3 rounded-lg text-base font-medium transition-colors duration-200 space-x-3
-                ${currentPage === item.key
-                  ? isDark
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-indigo-100 text-indigo-700'
-                  : isDark
-                  ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-            >
-              <Icon name={item.icon} className="w-5 h-5" />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* 下部: ユーザー・設定・ログアウト */}
-        <div className="px-6 pb-6 mt-auto">
-          {/* テーマ切替 */}
+      {/* メニュー */}
+      <div className="flex-1 flex flex-col py-4 space-y-1">
+        {navigationItems.map((item) => (
           <button
-            onClick={() => handleThemeChange(isDark ? 'light' : 'dark')}
-            className={`w-full flex items-center px-3 py-2 mb-2 rounded-lg transition-colors duration-200 space-x-2
-              ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
+            key={item.key}
+            onClick={() => {
+              onNavigate(item.key);
+              if (isMobile) setIsMobileMenuOpen(false);
+            }}
+            className={`flex items-center px-6 py-3 rounded-lg text-base font-medium transition-colors duration-200 space-x-3
+              ${currentPage === item.key
+                ? isDark
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-indigo-100 text-indigo-700'
+                : isDark
+                ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+              }`}
           >
-            <Icon name={isDark ? 'sun' : 'moon'} className="w-5 h-5" />
-            <span>{isDark ? t('settings.lightMode') : t('settings.darkMode')}</span>
+            <Icon name={item.icon} className="w-5 h-5" />
+            <span>{item.label}</span>
           </button>
+        ))}
+      </div>
 
-          {/* 言語・外観設定 */}
+      {/* 下部: ユーザー・設定・ログアウト */}
+      <div className="px-6 pb-6 mt-auto">
+        {/* テーマ切替 */}
+        <button
+          onClick={() => handleThemeChange(isDark ? 'light' : 'dark')}
+          className={`w-full flex items-center px-3 py-2 mb-2 rounded-lg transition-colors duration-200 space-x-2
+            ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
+        >
+          <Icon name={isDark ? 'sun' : 'moon'} className="w-5 h-5" />
+          <span>{isDark ? t('settings.lightMode') : t('settings.darkMode')}</span>
+        </button>
+
+        {/* 言語・外観設定（モバイルでは省略） */}
+        {!isMobile && (
           <div className="relative mb-2">
             <button
               onClick={() => setIsSettingsOpen((v) => !v)}
@@ -150,25 +150,37 @@ export const Navigation: React.FC<NavigationProps> = ({
               </div>
             )}
           </div>
+        )}
 
-          {/* ユーザー情報 */}
-          <div className="mb-2">
-            <div className="text-sm">
-              <p className="font-medium">{user?.name || 'User'}</p>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{user?.email || 'user@example.com'}</p>
-            </div>
+        {/* ユーザー情報 */}
+        <div className="mb-2">
+          <div className="text-sm">
+            <p className="font-medium">{user?.name || 'User'}</p>
+            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{user?.email || 'user@example.com'}</p>
           </div>
-
-          {/* ログアウト */}
-          <button
-            onClick={onLogout}
-            className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 space-x-2
-              ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
-          >
-            <Icon name="logout" className="w-5 h-5" />
-            <span>{t('auth.logout')}</span>
-          </button>
         </div>
+
+        {/* ログアウト */}
+        <button
+          onClick={onLogout}
+          className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 space-x-2
+            ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
+        >
+          <Icon name="logout" className="w-5 h-5" />
+          <span>{t('auth.logout')}</span>
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* デスクトップ用: サイドバー本体 */}
+      <nav
+        className={`fixed top-0 left-0 h-screen z-40 flex flex-col ${sidebarWidth} transition-colors duration-200 hidden md:flex
+          ${isDark ? 'bg-gray-900 border-r border-gray-700 text-white' : 'bg-white border-r border-gray-200 text-gray-900'}`}
+      >
+        <SidebarContent />
       </nav>
 
       {/* モバイル用: ハンバーガーメニュー */}
@@ -182,57 +194,14 @@ export const Navigation: React.FC<NavigationProps> = ({
 
       {/* モバイル用: サイドバーオーバーレイ */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black bg-opacity-40" onClick={() => setIsMobileMenuOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-black bg-opacity-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />
       )}
       {isMobileMenuOpen && (
         <nav
-          className={`fixed top-0 left-0 h-screen z-50 flex flex-col ${sidebarWidth} transition-colors duration-200
+          className={`fixed top-0 left-0 h-screen z-50 flex flex-col ${sidebarWidth} transition-colors duration-200 md:hidden
             ${isDark ? 'bg-gray-900 border-r border-gray-700 text-white' : 'bg-white border-r border-gray-200 text-gray-900'}`}
         >
-          {/* ロゴ */}
-          <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                <Icon name="barChart" className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold">Insightify</span>
-            </div>
-          </div>
-          {/* メニュー */}
-          <div className="flex-1 flex flex-col py-4 space-y-1">
-            {navigationItems.map((item) => (
-              <button
-                key={item.key}
-                onClick={() => {
-                  onNavigate(item.key);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`flex items-center px-6 py-3 rounded-lg text-base font-medium transition-colors duration-200 space-x-3
-                  ${currentPage === item.key
-                    ? isDark
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-indigo-100 text-indigo-700'
-                    : isDark
-                    ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                  }`}
-              >
-                <Icon name={item.icon} className="w-5 h-5" />
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
-          {/* 下部: ユーザー・設定・ログアウト（省略可） */}
-          <div className="px-6 pb-6 mt-auto">
-            <button
-              onClick={onLogout}
-              className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 space-x-2
-                ${isDark ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
-            >
-              <Icon name="logout" className="w-5 h-5" />
-              <span>{t('auth.logout')}</span>
-            </button>
-          </div>
+          <SidebarContent isMobile={true} />
         </nav>
       )}
     </>

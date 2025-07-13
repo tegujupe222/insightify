@@ -141,7 +141,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
     return (
         <div className="min-h-screen bg-gray-900 text-gray-200 font-sans">
             <Header onLogout={onLogout} user={user} />
-            <main className="p-4 sm:p-6 lg:p-8 max-w-screen-2xl mx-auto">
+            <main className="pt-16 p-4 sm:p-6 lg:p-8 max-w-screen-2xl mx-auto">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-white">Administrator Dashboard</h1>
                     <p className="text-gray-400 mt-1">Manage users, subscriptions, and system settings.</p>
