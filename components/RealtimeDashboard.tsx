@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-// import { websocketService, LiveVisitor, PageView, RealTimeEvent } from '../services/websocket';
 import { StatCard } from './StatCard';
 import { Icon } from './Icon';
+import { useToast } from './Toast';
 
 interface LiveVisitor {
   id: string;
@@ -44,42 +44,58 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
   const [liveVisitors, setLiveVisitors] = useState<LiveVisitor[]>([]);
   const [recentPageViews, setRecentPageViews] = useState<PageView[]>([]);
   const [recentEvents, setRecentEvents] = useState<RealTimeEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
-    // WebSocket接続は無効化
-    // websocketService.connect(token, projectId);
-    // setIsConnected(websocketService.isConnected());
-    // websocketService.on('pageview', handlePageView);
-    // websocketService.on('event', handleEvent);
-    // return () => { ... };
-
-    // 初回データ取得 & ポーリング
-    loadInitialData();
-    const interval = setInterval(loadInitialData, 10000); // 10秒ごとに取得
-    return () => clearInterval(interval);
-  }, [projectId, token]);
-
-  const loadInitialData = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://insightify-eight.vercel.app'}/api/realtime/${projectId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+    let isMounted = true;
+    const loadInitialData = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/realtime/${projectId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && isMounted) {
+            setLiveVisitors(data.data.liveVisitors || []);
+            setRecentPageViews(data.data.recentPageViews || []);
+            setRecentEvents(data.data.recentEvents || []);
+          }
+        } else {
+          if (isMounted) {
+            showToast({
+              type: 'error',
+              title: 'リアルタイムデータ取得エラー',
+              message: 'APIからデータを取得できませんでした',
+              duration: 3000
+            });
+            // setStateは呼ばず、前回のデータを保持
+          }
         }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setLiveVisitors(data.data.liveVisitors || []);
-          setRecentPageViews(data.data.recentPageViews || []);
-          setRecentEvents(data.data.recentEvents || []);
+      } catch (error) {
+        if (isMounted) {
+          showToast({
+            type: 'error',
+            title: 'リアルタイムデータ取得エラー',
+            message: 'ネットワークエラーまたはAPIエラー',
+            duration: 3000
+          });
+          // setStateは呼ばず、前回のデータを保持
         }
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading real-time data:', error);
-    }
-  };
+    };
+    loadInitialData();
+    const interval = setInterval(loadInitialData, 60000); // 60秒ごと
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [projectId, token, showToast]);
 
   const formatTime = (timestamp: string | Date) => {
     const date = new Date(timestamp);
@@ -143,7 +159,9 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
           Live Visitors ({liveVisitors.length})
         </h3>
         <div className="space-y-3">
-          {liveVisitors.length === 0 ? (
+          {loading ? (
+            <p className="text-gray-500 text-center py-4">読み込み中...</p>
+          ) : liveVisitors.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No active visitors</p>
           ) : (
             liveVisitors.map((visitor) => (
@@ -177,7 +195,9 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
             Recent Page Views
           </h3>
           <div className="space-y-3">
-            {recentPageViews.length === 0 ? (
+            {loading ? (
+              <p className="text-gray-500 text-center py-4">読み込み中...</p>
+            ) : recentPageViews.length === 0 ? (
               <p className="text-gray-500 text-center py-4">No recent page views</p>
             ) : (
               recentPageViews.map((pageView) => (
@@ -205,7 +225,9 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
             Recent Events
           </h3>
           <div className="space-y-3">
-            {recentEvents.length === 0 ? (
+            {loading ? (
+              <p className="text-gray-500 text-center py-4">読み込み中...</p>
+            ) : recentEvents.length === 0 ? (
               <p className="text-gray-500 text-center py-4">No recent events</p>
             ) : (
               recentEvents.map((event) => (
