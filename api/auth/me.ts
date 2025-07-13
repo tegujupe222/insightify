@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-const jwt = require('jsonwebtoken');
+// @ts-ignore
+import jwt from 'jsonwebtoken';
 import { Pool } from 'pg';
 
 const pool = new Pool({
