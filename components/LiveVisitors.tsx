@@ -1,24 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface LiveVisitorsProps {
   initialCount: number;
 }
 
 export const LiveVisitors: React.FC<LiveVisitorsProps> = ({ initialCount }) => {
-  const [count, setCount] = useState(initialCount);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCount(prevCount => {
-        const change = Math.floor(Math.random() * 7) - 3; // -3 to +3
-        return Math.max(0, prevCount + change);
-      });
-    }, 2500);
-
-    return () => clearInterval(interval);
-  }, []);
-
+  // ランダム変動をやめ、propsの値のみ表示
   return (
     <div className="bg-gray-800 p-5 rounded-xl shadow-lg border border-gray-700 flex flex-col justify-between">
       <div className="flex items-center justify-between mb-4">
@@ -29,7 +17,7 @@ export const LiveVisitors: React.FC<LiveVisitorsProps> = ({ initialCount }) => {
         </span>
       </div>
       <div>
-        <p className="text-3xl font-bold text-white">{count}</p>
+        <p className="text-3xl font-bold text-white">{initialCount}</p>
         <p className="text-sm text-gray-400">on your site right now</p>
       </div>
     </div>
