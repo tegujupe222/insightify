@@ -239,7 +239,6 @@ export const ProjectList: React.FC<ProjectListProps> = ({
       {/* 招待モーダル */}
       {showInviteModal && selectedProject && (
         <InviteUserModal
-          projectId={selectedProject.id}
           projectName={selectedProject.name}
           onClose={() => setShowInviteModal(false)}
           onInvite={handleInviteUser}

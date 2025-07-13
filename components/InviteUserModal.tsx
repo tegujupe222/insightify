@@ -2,14 +2,12 @@ import React, { useState } from 'react';
 import { Icon } from './Icon';
 
 interface InviteUserModalProps {
-  projectId: string;
   projectName: string;
   onClose: () => void;
   onInvite: (email: string, role: string, message: string) => void;
 }
 
 export const InviteUserModal: React.FC<InviteUserModalProps> = ({ 
-  projectId, 
   projectName, 
   onClose, 
   onInvite 

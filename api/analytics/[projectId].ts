@@ -59,7 +59,7 @@ const authenticateToken = (req: Request): AuthUser | null => {
 };
 
 // ダミーデータ生成関数（実際の実装ではデータベースから取得）
-const generateAnalyticsData = (projectId: string): AnalyticsData => {
+const generateAnalyticsData = (): AnalyticsData => {
   // 過去30日間のビジターデータを生成
   const visitorData: DailyStat[] = [];
   for (let i = 29; i >= 0; i--) {
@@ -131,7 +131,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (req.method === 'GET') {
       // アナリティクスデータ取得
       // 実際の実装では、データベースからプロジェクトIDに基づいてデータを取得
-      const analyticsData = generateAnalyticsData(projectId);
+      const analyticsData = generateAnalyticsData();
 
       return new Response(
         JSON.stringify({

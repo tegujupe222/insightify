@@ -23,7 +23,6 @@ const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthU
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
   const [showTrackingCodeModal, setShowTrackingCodeModal] = useState(false);
   const [newlyCreatedProject, setNewlyCreatedProject] = useState<Project | null>(null);
-  const [projectsLoading, setProjectsLoading] = useState(false);
 
   useEffect(() => {
     if (!prevUserRef.current && user) {
@@ -45,7 +44,6 @@ const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthU
 
   const fetchProjects = async () => {
     try {
-      setProjectsLoading(true);
       const token = localStorage.getItem('jwt');
       if (!token) {
         throw new Error('認証トークンが見つかりません');
@@ -76,8 +74,6 @@ const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthU
         message: error instanceof Error ? error.message : 'プロジェクトの取得に失敗しました',
         duration: 5000
       });
-    } finally {
-      setProjectsLoading(false);
     }
   };
 

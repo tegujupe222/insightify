@@ -39,6 +39,8 @@ export interface Project {
   url: string;
   domains?: string[];
   trackingCode: string;
+  userRole?: string;
+  joinedAt?: string;
   createdAt: Date;
   updatedAt: Date;
 }
