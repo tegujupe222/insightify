@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/jwt-decode": "^2.2.1",
     "@types/pg": "^8.15.4",
