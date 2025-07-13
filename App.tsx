@@ -302,7 +302,41 @@ const App: React.FC = () => {
       });
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData.data.user);
+        const user = userData.data.user;
+        
+        // 管理者メールアドレスの場合は管理者権限を確認
+        const adminEmails = ['g-igasaki@shinko.ed.jp', 'igafactory2023@gmail.com'];
+        if (adminEmails.includes(user.email.toLowerCase()) && user.role !== 'admin') {
+          console.log('Admin email detected but user is not admin, updating...');
+          
+          // 管理者権限を更新
+          const updateResponse = await fetch('/api/admin/setup-admin', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (updateResponse.ok) {
+            // 更新後にユーザー情報を再取得
+            const updatedResponse = await fetch('/api/auth/me', {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            if (updatedResponse.ok) {
+              const updatedUserData = await updatedResponse.json();
+              setUser(updatedUserData.data.user);
+            } else {
+              setUser(user);
+            }
+          } else {
+            setUser(user);
+          }
+        } else {
+          setUser(user);
+        }
       } else {
         localStorage.removeItem('jwt');
       }
