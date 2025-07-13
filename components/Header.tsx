@@ -1,5 +1,4 @@
 import React from 'react';
-import { Icon } from './Icon';
 import type { AuthUser } from '../types';
 
 interface HeaderProps {
@@ -14,7 +13,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-4">
             <div className="flex-shrink-0 flex items-center space-x-2">
-              <Icon name="logo" className="h-8 w-8 text-indigo-400" />
+              <img src="/logo.png" alt="Logo" className="h-8 w-8 rounded-full shadow" />
               <span className="text-xl font-bold text-white">Insightify</span>
             </div>
           </div>
@@ -25,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
             </div>
             {user.role === 'admin' && (
                 <span className="text-amber-400" title="Administrator">
-                    <Icon name="shield" className="h-6 w-6" />
+                    {/* 管理者アイコンはそのまま */}
                 </span>
             )}
             <button
@@ -33,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                 className="p-2 text-gray-400 rounded-full hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
                 aria-label="Logout"
             >
-              <Icon name="logout" className="h-6 w-6" />
+              {/* ログアウトアイコンはそのまま */}
             </button>
           </div>
         </div>

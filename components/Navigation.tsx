@@ -51,9 +51,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       {/* ロゴ */}
       <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <Icon name="barChart" className="w-5 h-5 text-white" />
-          </div>
+          <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-full shadow" />
           <span className="text-xl font-bold">Insightify</span>
         </div>
       </div>

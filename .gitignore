@@ -70,3 +70,6 @@ jspm_packages/
 # Temporary files
 tmp/
 temp/
+
+# DB schema file (local only)
+schema.sql
