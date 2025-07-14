@@ -1,4 +1,16 @@
 {
+  "version": 2,
+  "functions": {
+    "api/auth/current-user.ts": {
+      "runtime": "@vercel/node"
+    },
+    "api/auth/login.ts": {
+      "runtime": "@vercel/node"
+    },
+    "api/projects/index.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api).*)", "destination": "/index.html" }
