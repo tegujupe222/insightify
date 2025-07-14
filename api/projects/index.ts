@@ -26,6 +26,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const token = authHeader.replace('Bearer ', '');
   const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
   
+  // デバッグログを追加
+  console.log('JWT decoded:', decoded);
+  console.log('decoded.userId:', decoded.userId);
+  
   const client = await pool.connect();
   
   try {
@@ -89,6 +93,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({
           success: false,
           error: '有効なURLを入力してください'
+        });
+      }
+
+      // ユーザーIDの確認
+      if (!decoded.userId) {
+        console.error('User ID is missing from JWT token');
+        return res.status(401).json({
+          success: false,
+          error: '認証情報が無効です'
         });
       }
 
