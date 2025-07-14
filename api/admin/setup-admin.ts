@@ -33,7 +33,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const user = existingUser.rows[0];
           if (user.role !== 'admin') {
             await client.query(
-              'UPDATE users SET role = $1, subscription_status = $2, page_views_limit = $3 WHERE id = $4',
+              `UPDATE users 
+               SET role = $1, 
+                   subscription_status = $2, 
+                   page_views_limit = $3,
+                   updated_at = NOW()
+               WHERE id = $4`,
               ['admin', 'premium', 100000, user.id]
             );
             console.log(`Updated user ${email} to admin role`);
@@ -42,8 +47,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // 新規ユーザーを作成
           const hashedPassword = await bcrypt.hash('admin123', 12);
           await client.query(
-            `INSERT INTO users (email, password, role, subscription_status, page_views_limit, monthly_page_views)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
+            `INSERT INTO users (
+              email, password, role, subscription_status, page_views_limit, 
+              monthly_page_views, created_at, updated_at
+            )
+             VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
             [email, hashedPassword, 'admin', 'premium', 100000, 0]
           );
           console.log(`Created new admin user: ${email}`);

@@ -1,30 +1,61 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { Pool } from 'pg';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     try {
       const { email, password } = req.body;
 
-      // 簡易的な認証（実際のプロジェクトではデータベースを使用）
-      if (email && password) {
-        const user = {
-          id: 'demo-user-1',
-          email: email,
-          role: 'user',
-          subscriptionStatus: 'free',
-          monthlyPageViews: 0,
-          pageViewsLimit: 3000
-        };
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          error: 'Email and password are required'
+        });
+      }
 
+      const client = await pool.connect();
+      
+      try {
+        // ユーザーを検索
+        const userResult = await client.query(
+          'SELECT * FROM users WHERE email = $1',
+          [email]
+        );
+
+        if (userResult.rows.length === 0) {
+          return res.status(401).json({
+            success: false,
+            error: 'Invalid credentials'
+          });
+        }
+
+        const user = userResult.rows[0];
+
+        // パスワードを検証
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) {
+          return res.status(401).json({
+            success: false,
+            error: 'Invalid credentials'
+          });
+        }
+
+        // JWTトークンを生成
         const token = jwt.sign(
           { 
             userId: user.id, 
             email: user.email, 
             role: user.role,
-            subscriptionStatus: user.subscriptionStatus,
-            monthlyPageViews: user.monthlyPageViews,
-            pageViewsLimit: user.pageViewsLimit
+            subscriptionStatus: user.subscription_status,
+            monthlyPageViews: user.monthly_page_views,
+            pageViewsLimit: user.page_views_limit
           },
           process.env.JWT_SECRET || 'fallback-secret',
           { expiresIn: '7d' }
@@ -37,21 +68,19 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
               id: user.id,
               email: user.email,
               role: user.role,
-              subscriptionStatus: user.subscriptionStatus,
-              monthlyPageViews: user.monthlyPageViews,
-              pageViewsLimit: user.pageViewsLimit
+              subscriptionStatus: user.subscription_status,
+              monthlyPageViews: user.monthly_page_views,
+              pageViewsLimit: user.page_views_limit
             },
             token: token
           },
           message: 'Login successful'
         });
-      } else {
-        res.status(400).json({
-          success: false,
-          error: 'Email and password are required'
-        });
+      } finally {
+        client.release();
       }
     } catch (error) {
+      console.error('Login error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error'

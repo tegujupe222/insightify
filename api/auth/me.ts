@@ -1,7 +1,13 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     try {
       const authHeader = req.headers['authorization'];
@@ -14,7 +20,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret', (err: any, decoded: any) => {
+      jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret', async (err: any, decoded: any) => {
         if (err) {
           return res.status(403).json({
             success: false,
@@ -22,23 +28,41 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
-        // デコードされたトークンからユーザー情報を返す
-        const user = {
-          id: decoded.userId,
-          email: decoded.email,
-          role: decoded.role,
-          subscriptionStatus: decoded.subscriptionStatus || 'free',
-          monthlyPageViews: decoded.monthlyPageViews || 0,
-          pageViewsLimit: decoded.pageViewsLimit || 3000
-        };
+        const client = await pool.connect();
+        
+        try {
+          // データベースから最新のユーザー情報を取得
+          const userResult = await client.query(
+            'SELECT * FROM users WHERE id = $1',
+            [decoded.userId]
+          );
 
-        res.status(200).json({
-          success: true,
-          data: {
-            user: user
-          },
-          message: 'User information retrieved successfully'
-        });
+          if (userResult.rows.length === 0) {
+            return res.status(404).json({
+              success: false,
+              error: 'User not found'
+            });
+          }
+
+          const user = userResult.rows[0];
+
+          res.status(200).json({
+            success: true,
+            data: {
+              user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                subscriptionStatus: user.subscription_status,
+                monthlyPageViews: user.monthly_page_views,
+                pageViewsLimit: user.page_views_limit
+              }
+            },
+            message: 'User information retrieved successfully'
+          });
+        } finally {
+          client.release();
+        }
       });
     } catch (error) {
       console.error('Get user error:', error);
