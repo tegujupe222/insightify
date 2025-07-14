@@ -29,12 +29,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // デバッグログを追加
   console.log('JWT decoded:', decoded);
   console.log('decoded.userId:', decoded.userId);
+  console.log('decoded.id:', decoded.id);
   
   const client = await pool.connect();
   
   try {
     if (req.method === 'GET') {
       // プロジェクト一覧取得（自分のプロジェクト + 共有されているプロジェクト）
+      const userId = decoded.userId || decoded.id;
       const projectsResult = await client.query(
         `SELECT DISTINCT p.*, 
                 CASE 
@@ -46,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
          LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $1
          WHERE p.user_id = $1 OR pm.user_id = $1
          ORDER BY p.created_at DESC`,
-        [decoded.userId]
+        [userId]
       );
 
       const projects = projectsResult.rows.map(project => ({
@@ -97,7 +99,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // ユーザーIDの確認
-      if (!decoded.userId) {
+      const userId = decoded.userId || decoded.id;
+      if (!userId) {
         console.error('User ID is missing from JWT token');
         return res.status(401).json({
           success: false,
@@ -114,7 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name,
           url,
           JSON.stringify(domains),
-          decoded.userId,
+          userId,
           `<!-- Insightify Tracking Snippet for ${name} -->
 <script async defer src="https://cdn.insightify.com/tracker.js" data-project-id="${name.toLowerCase().replace(/\s+/g, '-')}"></script>`,
           true

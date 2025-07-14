@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // デコードされたトークンからユーザー情報を返す（データベース接続なし）
         const user = {
-          id: decoded.userId,
+          id: decoded.userId || decoded.id,
           email: decoded.email,
           role: decoded.role,
           subscriptionStatus: decoded.subscriptionStatus || 'free',

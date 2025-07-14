@@ -42,10 +42,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const memberResult = await client.query(
       `SELECT role FROM project_members 
        WHERE project_id = $1 AND user_id = $2 AND role IN ('owner', 'editor')`,
-      [projectId, decoded.userId]
+              [projectId, decoded.userId || decoded.id]
     );
 
-    if (project.user_id !== decoded.userId && memberResult.rows.length === 0) {
+          if (project.user_id !== (decoded.userId || decoded.id) && memberResult.rows.length === 0) {
       return res.status(403).json({ 
         success: false, 
         error: 'You do not have permission to access this project' 
@@ -116,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // 自分自身を削除することはできない
-        if (memberId === decoded.userId) {
+        if (memberId === (decoded.userId || decoded.id)) {
           return res.status(400).json({ 
             success: false, 
             error: 'You cannot remove yourself from the project' 
@@ -144,7 +144,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const targetMember = targetMemberResult.rows[0];
 
         // オーナーまたは編集者のみがメンバーを削除できる
-        const currentUserRole = project.user_id === decoded.userId ? 'owner' : 
+        const currentUserRole = project.user_id === (decoded.userId || decoded.id) ? 'owner' : 
           memberResult.rows[0]?.role;
 
         if (currentUserRole !== 'owner' && targetMember.role === 'owner') {
@@ -185,7 +185,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // プロジェクト所有者のみが権限を変更できる
-        if (project.user_id !== decoded.userId) {
+        if (project.user_id !== (decoded.userId || decoded.id)) {
           return res.status(403).json({ 
             success: false, 
             error: 'Only project owner can change member roles' 
@@ -193,7 +193,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // 自分自身の権限を変更することはできない
-        if (updateMemberId === decoded.userId) {
+                  if (updateMemberId === (decoded.userId || decoded.id)) {
           return res.status(400).json({ 
             success: false, 
             error: 'You cannot change your own role' 

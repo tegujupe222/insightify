@@ -74,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // 招待されたメールアドレスとログインユーザーのメールアドレスが一致するかチェック
       const userResult = await client.query(
         'SELECT id, email FROM users WHERE id = $1',
-        [decoded.userId]
+        [decoded.userId || decoded.id]
       );
 
       if (userResult.rows.length === 0) {

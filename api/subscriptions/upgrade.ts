@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // ユーザーを取得
       const userResult = await client.query(
         'SELECT id, email, subscription_status FROM users WHERE id = $1',
-        [decoded.userId]
+        [decoded.userId || decoded.id]
       );
 
       if (userResult.rows.length === 0) {

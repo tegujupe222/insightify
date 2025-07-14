@@ -67,10 +67,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const memberResult = await client.query(
         `SELECT role FROM project_members 
          WHERE project_id = $1 AND user_id = $2 AND role IN ('owner', 'editor')`,
-        [projectId, decoded.userId]
+        [projectId, decoded.userId || decoded.id]
       );
 
-      if (project.user_id !== decoded.userId && memberResult.rows.length === 0) {
+      if (project.user_id !== (decoded.userId || decoded.id) && memberResult.rows.length === 0) {
         return res.status(403).json({ 
           success: false, 
           error: 'You do not have permission to invite users to this project' 
@@ -144,7 +144,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `INSERT INTO project_invitations (project_id, inviter_id, invitee_email, role, message, token, expires_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
-        [projectId, decoded.userId, email, role, message, invitationToken, expiresAt]
+        [projectId, decoded.userId || decoded.id, email, role, message, invitationToken, expiresAt]
       );
 
       const invitation = invitationResult.rows[0];
