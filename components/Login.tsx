@@ -1,9 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-export const Login: React.FC<{ onLoginSuccess: (user: any) => void }> = ({ onLoginSuccess }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
+export const Login: React.FC = () => {
   const handleGoogleLogin = () => {
     window.location.href = '/api/auth/google';
   };
@@ -14,15 +11,11 @@ export const Login: React.FC<{ onLoginSuccess: (user: any) => void }> = ({ onLog
         <div className="flex flex-col items-center mb-6">
           <img src="/logo.png" alt="Logo" className="h-20 w-20 rounded-full shadow mb-2" />
           <span className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Insightify</span>
-          <span className="text-sm text-gray-500 dark:text-gray-300 text-center">あなたのWebサイトを“見える化”する次世代アナリティクス</span>
+          <span className="text-sm text-gray-500 dark:text-gray-300 text-center">あなたのWebサイトを"見える化"する次世代アナリティクス</span>
         </div>
-        {error && (
-          <div className="mb-4 text-red-600 text-center">{error}</div>
-        )}
         <button
           onClick={handleGoogleLogin}
           className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded shadow transition-colors duration-200"
-          disabled={isLoading}
         >
           <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48">
             <g>
