@@ -326,3 +326,53 @@ const App: React.FC = () => {
                 'Authorization': `Bearer ${token}`
               }
             });
+            if (updatedResponse.ok) {
+              const updatedUserData = await updatedResponse.json();
+              setUser(updatedUserData.data.user);
+            } else {
+              setUser(user);
+            }
+          } else {
+            setUser(user);
+          }
+        } else {
+          setUser(user);
+        }
+      } else {
+        localStorage.removeItem('jwt');
+      }
+    } catch (err) {
+      setError('認証の確認に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = (userData: AuthUser) => {
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('jwt');
+    setUser(null);
+  };
+
+  return (
+    <ThemeProvider>
+      <ErrorBoundary>
+        <ToastProvider>
+          <Routes>
+            <Route path="/auth/callback" element={<AuthCallback onLoginSuccess={handleLogin} />} />
+            <Route path="/invite/:token" element={<InviteAcceptPage />} />
+            <Route path="/privacy-policy" element={<><PrivacyPolicy /><Footer /></>} />
+            <Route path="/cancel-policy" element={<><CancelPolicy /><Footer /></>} />
+            <Route path="/terms" element={<><Terms /><Footer /></>} />
+            <Route path="*" element={<><AppContent user={user} onLoginSuccess={handleLogin} onLogout={handleLogout} loading={loading} error={error} /><Footer /></>} />
+          </Routes>
+        </ToastProvider>
+      </ErrorBoundary>
+    </ThemeProvider>
+  );
+};
+
+export default App;
