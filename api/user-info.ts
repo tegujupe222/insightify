@@ -1,5 +1,6 @@
-// Vercel API Route for user authentication - me.ts
+// Vercel API Route for user authentication - user-info.ts
 // This endpoint retrieves current user information from database
+// Updated for Vercel cache clearing
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';

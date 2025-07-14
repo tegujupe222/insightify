@@ -296,7 +296,7 @@ const App: React.FC = () => {
         setLoading(false);
         return;
       }
-      const response = await fetch('/api/me', {
+      const response = await fetch('/api/user-info', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -321,7 +321,7 @@ const App: React.FC = () => {
           
           if (updateResponse.ok) {
             // 更新後にユーザー情報を再取得
-            const updatedResponse = await fetch('/api/me', {
+            const updatedResponse = await fetch('/api/user-info', {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
