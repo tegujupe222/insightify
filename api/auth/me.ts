@@ -37,12 +37,21 @@ export default async function handler(req: any, res: any) {
 
     const userId = decoded.userId || decoded.id;
 
-    // Return user info (in a real app, you'd fetch from database)
+    // Return user info in the format expected by frontend
     return res.status(200).json({
-      id: userId,
-      email: decoded.email,
-      role: decoded.role || 'user',
-      name: decoded.name || 'User'
+      success: true,
+      data: {
+        user: {
+          id: userId,
+          email: decoded.email,
+          role: decoded.role || 'user',
+          name: decoded.name || 'User',
+          subscriptionStatus: decoded.subscriptionStatus || 'free',
+          monthlyPageViews: decoded.monthlyPageViews || 0,
+          pageViewsLimit: decoded.pageViewsLimit || 3000
+        }
+      },
+      message: 'User information retrieved successfully'
     });
 
   } catch (error) {
