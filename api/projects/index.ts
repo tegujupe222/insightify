@@ -26,6 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const token = authHeader.replace('Bearer ', '');
   const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
   
+  const userId = decoded.userId || decoded.id;
   const client = await pool.connect();
   
   try {
@@ -42,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
          LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $1
          WHERE p.user_id = $1 OR pm.user_id = $1
          ORDER BY p.created_at DESC`,
-        [decoded.userId]
+        [userId]
       );
 
       const projects = projectsResult.rows.map(project => ({
@@ -101,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name,
           url,
           JSON.stringify(domains),
-          decoded.userId,
+          userId,
           `<!-- Insightify Tracking Snippet for ${name} -->
 <script async defer src="https://cdn.insightify.com/tracker.js" data-project-id="${name.toLowerCase().replace(/\s+/g, '-')}"></script>`,
           true
