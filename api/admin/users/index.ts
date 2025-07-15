@@ -19,7 +19,15 @@ interface User {
 
 // 認証ミドルウェア
 const authenticateToken = (req: Request): AuthUser | null => {
-  const authHeader = req.headers.get('authorization');
+  let authHeader: string | null = null;
+  // Support both Edge API (Headers) and Express/Node (object)
+  if (req && req.headers) {
+    if (typeof (req.headers as any).get === 'function') {
+      authHeader = (req.headers as any).get('authorization');
+    } else if (typeof (req.headers as any)['authorization'] === 'string') {
+      authHeader = (req.headers as any)['authorization'];
+    }
+  }
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
