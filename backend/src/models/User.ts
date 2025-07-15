@@ -36,9 +36,9 @@ export class UserModel {
     return result.rows[0] || null;
   }
 
-  static async findAll(): Promise<User[]> {
-    const query = 'SELECT id, email, role, subscription_status, subscription_plan, monthly_page_views, page_views_limit, created_at, updated_at FROM users ORDER BY created_at DESC';
-    const result = await pool.query(query);
+  static async findAll(limit: number = 100): Promise<User[]> {
+    const query = 'SELECT id, email, role, subscription_status, subscription_plan, monthly_page_views, page_views_limit, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1';
+    const result = await pool.query(query, [limit]);
     return result.rows;
   }
 

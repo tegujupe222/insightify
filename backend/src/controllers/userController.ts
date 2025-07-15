@@ -6,7 +6,7 @@ export class UserController {
   // Get all users (admin only)
   static async getAllUsers(_req: Request, res: Response) {
     try {
-      const users = await UserModel.findAll();
+      const users = await UserModel.findAll(100); // 100件まで取得
       
       const response: ApiResponse = {
         success: true,
