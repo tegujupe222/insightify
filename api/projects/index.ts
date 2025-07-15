@@ -26,17 +26,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const token = authHeader.replace('Bearer ', '');
   const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
   
-  // デバッグログを追加
-  console.log('JWT decoded:', decoded);
-  console.log('decoded.userId:', decoded.userId);
-  console.log('decoded.id:', decoded.id);
-  
   const client = await pool.connect();
   
   try {
     if (req.method === 'GET') {
       // プロジェクト一覧取得（自分のプロジェクト + 共有されているプロジェクト）
-      const userId = decoded.userId || decoded.id;
       const projectsResult = await client.query(
         `SELECT DISTINCT p.*, 
                 CASE 
@@ -48,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
          LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $1
          WHERE p.user_id = $1 OR pm.user_id = $1
          ORDER BY p.created_at DESC`,
-        [userId]
+        [decoded.userId]
       );
 
       const projects = projectsResult.rows.map(project => ({
@@ -98,16 +92,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // ユーザーIDの確認
-      const userId = decoded.userId || decoded.id;
-      if (!userId) {
-        console.error('User ID is missing from JWT token');
-        return res.status(401).json({
-          success: false,
-          error: '認証情報が無効です'
-        });
-      }
-
       // プロジェクトを作成
       const projectResult = await client.query(
         `INSERT INTO projects (name, url, domains, user_id, tracking_code, is_active)
@@ -117,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name,
           url,
           JSON.stringify(domains),
-          userId,
+          decoded.userId,
           `<!-- Insightify Tracking Snippet for ${name} -->
 <script async defer src="https://cdn.insightify.com/tracker.js" data-project-id="${name.toLowerCase().replace(/\s+/g, '-')}"></script>`,
           true
