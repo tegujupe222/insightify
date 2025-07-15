@@ -309,7 +309,6 @@ const App: React.FC = () => {
         const adminEmails = ['g-igasaki@shinko.ed.jp', 'igafactory2023@gmail.com'];
         if (adminEmails.includes(user.email.toLowerCase()) && user.role !== 'admin') {
           console.log('Admin email detected but user is not admin, updating...');
-          
           // 管理者権限を更新
           const updateResponse = await fetch('/api/admin/setup-admin', {
             method: 'POST',
@@ -318,12 +317,16 @@ const App: React.FC = () => {
               'Content-Type': 'application/json'
             }
           });
-          
           if (updateResponse.ok) {
+            const updateData = await updateResponse.json();
+            // 新しいトークンが返ってきた場合は保存し直す
+            if (updateData.data && updateData.data.token) {
+              localStorage.setItem('jwt', updateData.data.token);
+            }
             // 更新後にユーザー情報を再取得
             const updatedResponse = await fetch('/api/auth/me', {
               headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
               }
             });
             if (updatedResponse.ok) {

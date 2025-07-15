@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -19,7 +20,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const client = await pool.connect();
-    
     try {
       // 管理者メールアドレスのユーザーを確認・作成・更新
       for (const email of ADMIN_EMAILS) {
@@ -56,11 +56,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ['admin']
       );
 
+      // リクエストユーザーのメールアドレスをJWTから取得
+      const authHeader = req.headers.authorization;
+      let token = null;
+      let newToken = null;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+          // DBから最新のユーザー情報を取得
+          const userResult = await client.query('SELECT id, email, role, subscription_status FROM users WHERE email = $1', [decoded.email]);
+          if (userResult.rows.length > 0) {
+            const user = userResult.rows[0];
+            newToken = jwt.sign(
+              {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                subscriptionStatus: user.subscription_status || 'free',
+                monthlyPageViews: user.monthly_page_views || 0,
+                pageViewsLimit: user.page_views_limit || 3000
+              },
+              process.env.JWT_SECRET || 'fallback-secret',
+              { expiresIn: '7d' }
+            );
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
       res.status(200).json({
         success: true,
         message: 'Admin users setup completed',
         data: {
-          adminUsers: adminUsers.rows
+          adminUsers: adminUsers.rows,
+          token: newToken // 新しいトークンを返す
         }
       });
 
