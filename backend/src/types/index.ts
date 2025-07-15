@@ -18,6 +18,7 @@ export interface User {
 }
 
 export interface UserCreateInput {
+  id?: string; // 追加: UUIDを明示的に指定できるように
   email: string;
   password: string;
   role?: 'admin' | 'user';

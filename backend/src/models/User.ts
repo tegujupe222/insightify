@@ -5,22 +5,31 @@ import { isAdminEmail, calculatePageViewsLimit } from '../utils/adminUtils';
 
 export class UserModel {
   static async create(userData: UserCreateInput): Promise<User> {
-    const { email, password, role = 'user' } = userData;
+    const { id, email, password, role = 'user' } = userData;
     const hashedPassword = await bcrypt.hash(password, 12);
     
     // Check if email should be admin based on allowed admin emails
     const finalRole = isAdminEmail(email) ? 'admin' : role;
     
-    const query = `
-      INSERT INTO users (email, password, role, subscription_status, page_views_limit)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
-    `;
+    let query: string;
+    let params: any[];
+    if (id) {
+      query = `
+        INSERT INTO users (id, email, password, role, subscription_status, page_views_limit)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `;
+      params = [id, email, hashedPassword, finalRole, finalRole === 'admin' ? 'premium' : 'free', calculatePageViewsLimit(finalRole === 'admin' ? 'premium' : 'free')];
+    } else {
+      query = `
+        INSERT INTO users (email, password, role, subscription_status, page_views_limit)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `;
+      params = [email, hashedPassword, finalRole, finalRole === 'admin' ? 'premium' : 'free', calculatePageViewsLimit(finalRole === 'admin' ? 'premium' : 'free')];
+    }
     
-    const subscriptionStatus = finalRole === 'admin' ? 'premium' : 'free';
-    const pageViewsLimit = calculatePageViewsLimit(subscriptionStatus);
-    
-    const result = await pool.query(query, [email, hashedPassword, finalRole, subscriptionStatus, pageViewsLimit]);
+    const result = await pool.query(query, params);
     return result.rows[0];
   }
 

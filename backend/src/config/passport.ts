@@ -3,6 +3,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Profile } from 'passport-google-oauth20';
 import { VerifyCallback } from 'passport-oauth2';
 import { UserModel } from '../models/User';
+import { v4 as uuidv4 } from 'uuid';
 
 export const setupPassport = () => {
   // Google OAuth設定
@@ -18,6 +19,7 @@ export const setupPassport = () => {
       if (!user) {
               // 新規ユーザー作成
       user = await UserModel.create({
+        id: uuidv4(), // UUIDを明示的に指定
         email: profile.emails?.[0]?.value || '',
         password: Math.random().toString(36).slice(-10), // ランダムパスワード
         role: 'user'
