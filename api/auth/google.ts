@@ -1,34 +1,31 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-
-// Google OAuth Strategy 設定
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID!,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  callbackURL: process.env.GOOGLE_CALLBACK_URL!,
-}, async (_accessToken: string, _refreshToken: string, profile: any, done: any) => {
-  try {
-    const email = profile.emails?.[0]?.value;
-    if (!email) return done(new Error('No email found'), false);
-    
-    // 簡易的なユーザー作成（実際のプロジェクトではデータベースを使用）
-    const user = {
-      id: profile.id,
-      email: email,
-      role: 'user'
-    };
-    
-    return done(null, user);
-  } catch (err) {
-    return done(err as Error, false);
-  }
-}));
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === 'GET') {
-    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res);
-  } else {
-    res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const redirectUri = process.env.GOOGLE_CALLBACK_URL;
+  
+  if (!clientId || !redirectUri) {
+    return res.status(500).json({ error: 'Google OAuth configuration missing' });
+  }
+
+  // Google OAuth2認証URLを構築
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${encodeURIComponent(clientId)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&response_type=code` +
+    `&scope=${encodeURIComponent('profile email')}` +
+    `&access_type=offline` +
+    `&prompt=consent`;
+
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  // Google認証ページにリダイレクト
+  res.redirect(authUrl);
 } 
