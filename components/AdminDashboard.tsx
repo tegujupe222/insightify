@@ -43,9 +43,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
 
                 if (usersResponse.ok) {
                     const usersResult = await usersResponse.json();
+                    console.log('Users API response:', usersResult);
                     if (usersResult.success) {
-                        // ユーザーデータを適切な形式に変換
-                        const formattedUsers = usersResult.data.map((user: any) => ({
+                        // APIレスポンスの構造に合わせて修正
+                        const usersData = usersResult.data.users || usersResult.data;
+                        console.log('Users data:', usersData);
+                        const formattedUsers = (Array.isArray(usersData) ? usersData : []).map((user: any) => ({
                             id: user.id,
                             name: user.name || user.email || 'Unknown User',
                             email: user.email,
@@ -71,9 +74,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
 
                 if (projectsResponse.ok) {
                     const projectsResult = await projectsResponse.json();
+                    console.log('Projects API response:', projectsResult);
                     if (projectsResult.success) {
-                        // createdAtをDate型に変換
-                        const projectsWithDates = projectsResult.data.map((project: any) => ({
+                        // APIレスポンスの構造に合わせて修正（二重構造に対応）
+                        const projectsData = projectsResult.data.data || projectsResult.data.projects || projectsResult.data;
+                        console.log('Projects data:', projectsData);
+                        const projectsWithDates = (Array.isArray(projectsData) ? projectsData : []).map((project: any) => ({
                             ...project,
                             createdAt: new Date(project.createdAt),
                             updatedAt: new Date(project.updatedAt)
