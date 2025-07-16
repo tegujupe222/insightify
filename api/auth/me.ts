@@ -37,6 +37,14 @@ export default async function handler(req: any, res: any) {
 
     const userId = decoded.userId || decoded.id;
 
+    // Check if the user ID is a numeric string (old format)
+    if (typeof userId === 'string' && /^\d+$/.test(userId)) {
+      return res.status(401).json({ 
+        error: 'Token format is outdated. Please log in again.',
+        code: 'TOKEN_OUTDATED'
+      });
+    }
+
     // Return user info in the format expected by frontend
     return res.status(200).json({
       success: true,

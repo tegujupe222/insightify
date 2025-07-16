@@ -203,13 +203,25 @@ const AppContent: React.FC<{ user: AuthUser | null; onLogout: () => void; loadin
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               {error}
             </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-            >
-              <Icon name="refresh" className="h-4 w-4 mr-2" />
-              再試行
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+              >
+                <Icon name="refresh" className="h-4 w-4 mr-2" />
+                再試行
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('jwt');
+                  window.location.reload();
+                }}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+              >
+                <Icon name="logout" className="h-4 w-4 mr-2" />
+                再ログイン
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -342,7 +354,14 @@ const App: React.FC = () => {
           setUser(user);
         }
       } else {
-        localStorage.removeItem('jwt');
+        const errorData = await response.json();
+        if (errorData.code === 'TOKEN_OUTDATED') {
+          // 古いトークンの場合は削除して再ログインを促す
+          localStorage.removeItem('jwt');
+          setError('セキュリティ更新のため、再度ログインしてください。');
+        } else {
+          localStorage.removeItem('jwt');
+        }
       }
     } catch (err) {
       setError('認証の確認に失敗しました');
