@@ -8,6 +8,16 @@ interface UserManagementTableProps {
 }
 
 export const UserManagementTable: React.FC<UserManagementTableProps> = ({ users, onDeleteUser }) => {
+  if (!users || users.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Icon name="users" className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+        <p className="text-gray-400">ユーザーがありません</p>
+        <p className="text-gray-500 text-sm">ユーザーが登録されていません</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flow-root">
       <div className="-mx-6 -my-2 overflow-x-auto">
@@ -28,22 +38,30 @@ export const UserManagementTable: React.FC<UserManagementTableProps> = ({ users,
             <tbody className="divide-y divide-gray-800">
               {users.map((user) => (
                 <tr key={user.id}>
-                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-white sm:pl-0">{user.name}</td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-400">{user.email}</td>
+                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-white sm:pl-0">
+                    {user.name || 'Unknown User'}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-400">
+                    {user.email || 'No email'}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-400">
                     <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
                       user.status === 'Active' ? 'bg-green-500/10 text-green-400 ring-1 ring-inset ring-green-500/20' : 'bg-gray-400/10 text-gray-400 ring-1 ring-inset ring-gray-400/20'
                     }`}>
-                      {user.status}
+                      {user.status || 'Unknown'}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-400">{user.projectCount}</td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-400">{user.lastLogin}</td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-400">
+                    {user.projectCount || 0}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-400">
+                    {user.lastLogin || 'Never'}
+                  </td>
                   <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
                     <button
                         onClick={() => onDeleteUser(user.id)}
                         className="text-red-500 hover:text-red-400 p-1 rounded-md hover:bg-gray-700 transition-colors"
-                        aria-label={`Delete user ${user.name}`}
+                        aria-label={`Delete user ${user.name || user.email}`}
                     >
                         <Icon name="trash" className="h-5 w-5" />
                     </button>

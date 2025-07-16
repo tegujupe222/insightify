@@ -44,8 +44,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
                 if (usersResponse.ok) {
                     const usersResult = await usersResponse.json();
                     if (usersResult.success) {
-                        setUsers(usersResult.data);
+                        // ユーザーデータを適切な形式に変換
+                        const formattedUsers = usersResult.data.map((user: any) => ({
+                            id: user.id,
+                            name: user.name || user.email || 'Unknown User',
+                            email: user.email,
+                            lastLogin: user.lastLogin || user.updatedAt || 'Never',
+                            projectCount: user.projectCount || 0,
+                            status: user.status || (user.isBanned ? 'Inactive' : 'Active'),
+                            role: user.role || 'user',
+                            isBanned: user.isBanned || false
+                        }));
+                        setUsers(formattedUsers);
                     }
+                } else {
+                    console.warn('Failed to fetch users:', usersResponse.status);
                 }
 
                 // プロジェクト一覧を取得
@@ -257,7 +270,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
             case 'users':
                 return (
                     <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
-                        <h2 className="text-xl font-semibold mb-4 text-white">User Management</h2>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-semibold text-white">User Management</h2>
+                            <div className="text-sm text-gray-400">
+                                Total: {users.length} users
+                            </div>
+                        </div>
                         <UserManagementTable users={users} onDeleteUser={handleDeleteUser} />
                     </div>
                 );
