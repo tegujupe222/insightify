@@ -6,17 +6,7 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-interface Project {
-  id: string;
-  name: string;
-  url: string;
-  domains?: string[];
-  userId: string;
-  trackingCode: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+
 
 interface AuthUser {
   id: string;

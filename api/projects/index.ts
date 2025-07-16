@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -103,18 +104,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // プロジェクトを作成
+      // プロジェクトを作成（まずIDを生成）
+      const projectId = randomUUID();
+      const trackingCode = `<!-- Insightify Tracking Snippet for ${name} -->
+<script async defer src="${process.env.NODE_ENV === 'production' ? 'https://insightify.vercel.app' : 'http://localhost:3000'}/tracker/tracker.js" data-project-id="${projectId}"></script>`;
+
       const projectResult = await client.query(
-        `INSERT INTO projects (name, url, domains, user_id, tracking_code, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO projects (id, name, url, domains, user_id, tracking_code, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
         [
+          projectId,
           name,
           url,
           JSON.stringify(domains),
           userId,
-          `<!-- Insightify Tracking Snippet for ${name} -->
-<script async defer src="https://cdn.insightify.com/tracker.js" data-project-id="${name.toLowerCase().replace(/\s+/g, '-')}"></script>`,
+          trackingCode,
           true
         ]
       );

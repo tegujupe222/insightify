@@ -22,65 +22,106 @@ export const SubscriptionManagementTable: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data for now - replace with actual API call
-    const mockSubscriptions: Subscription[] = [
-      {
-        id: 'sub_1',
-        userId: 'user_1',
-        planType: 'monthly',
-        amount: 5500,
-        status: 'pending',
-        invoiceNumber: 'INV-123456789-001',
-        paymentMethod: 'bank_transfer',
-        createdAt: '2024-01-15T10:30:00Z',
-        user: {
-          id: 'user_1',
-          email: 'user1@example.com',
-          role: 'user'
-        }
-      },
-      {
-        id: 'sub_2',
-        userId: 'user_2',
-        planType: 'yearly',
-        amount: 55000,
-        status: 'paid',
-        invoiceNumber: 'INV-123456789-002',
-        paymentMethod: 'bank_transfer',
-        createdAt: '2024-01-10T14:20:00Z',
-        user: {
-          id: 'user_2',
-          email: 'user2@example.com',
-          role: 'user'
-        }
-      }
-    ];
-
-    setSubscriptions(mockSubscriptions);
-    setLoading(false);
+    fetchSubscriptions();
   }, []);
 
-  const handleConfirmPayment = (subscriptionId: string) => {
-    if (window.confirm('Confirm payment for this subscription?')) {
-      setSubscriptions(prev => 
-        prev.map(sub => 
-          sub.id === subscriptionId 
-            ? { ...sub, status: 'paid' as const }
-            : sub
-        )
-      );
+  const fetchSubscriptions = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        throw new Error('認証トークンが見つかりません');
+      }
+
+      const response = await fetch('/api/admin/subscriptions', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSubscriptions(data.data.subscriptions || []);
+        } else {
+          console.error('Failed to fetch subscriptions:', data.error);
+        }
+      } else {
+        console.error('Failed to fetch subscriptions:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to fetch subscriptions:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCancelSubscription = (subscriptionId: string) => {
+  const handleConfirmPayment = async (subscriptionId: string) => {
+    if (window.confirm('Confirm payment for this subscription?')) {
+      try {
+        const token = localStorage.getItem('jwt');
+        if (!token) {
+          throw new Error('認証トークンが見つかりません');
+        }
+
+        const response = await fetch(`/api/admin/subscriptions/${subscriptionId}/confirm`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            // 成功したら一覧を再取得
+            await fetchSubscriptions();
+          } else {
+            alert('支払い確認に失敗しました: ' + data.error);
+          }
+        } else {
+          alert('支払い確認に失敗しました');
+        }
+      } catch (error) {
+        console.error('Failed to confirm payment:', error);
+        alert('支払い確認に失敗しました');
+      }
+    }
+  };
+
+  const handleCancelSubscription = async (subscriptionId: string) => {
     if (window.confirm('Cancel this subscription?')) {
-      setSubscriptions(prev => 
-        prev.map(sub => 
-          sub.id === subscriptionId 
-            ? { ...sub, status: 'cancelled' as const }
-            : sub
-        )
-      );
+      try {
+        const token = localStorage.getItem('jwt');
+        if (!token) {
+          throw new Error('認証トークンが見つかりません');
+        }
+
+        const response = await fetch(`/api/admin/subscriptions/${subscriptionId}/cancel`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            // 成功したら一覧を再取得
+            await fetchSubscriptions();
+          } else {
+            alert('サブスクリプションキャンセルに失敗しました: ' + data.error);
+          }
+        } else {
+          alert('サブスクリプションキャンセルに失敗しました');
+        }
+      } catch (error) {
+        console.error('Failed to cancel subscription:', error);
+        alert('サブスクリプションキャンセルに失敗しました');
+      }
     }
   };
 

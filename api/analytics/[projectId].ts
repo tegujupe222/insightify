@@ -1,4 +1,10 @@
 import jwt from 'jsonwebtoken';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
 interface AuthUser {
   id: string;
@@ -61,40 +67,93 @@ const authenticateToken = (req: Request): AuthUser | null => {
   }
 };
 
-// ダミーデータ生成関数（実際の実装ではデータベースから取得）
-const generateAnalyticsData = (): AnalyticsData => {
-  // 過去30日間のビジターデータを生成
-  const visitorData: DailyStat[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    visitorData.push({
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      visits: Math.floor(Math.random() * (5000 - 1500 + 1)) + 1500,
-    });
-  }
+// データベースからアナリティクスデータを取得する関数
+const getAnalyticsData = async (projectId: string): Promise<AnalyticsData> => {
+  const client = await pool.connect();
+  try {
+    // プロジェクトの存在と権限チェック
+    const projectResult = await client.query('SELECT * FROM projects WHERE id = $1', [projectId]);
+    if (projectResult.rows.length === 0) {
+      throw new Error('プロジェクトが見つかりません');
+    }
 
-  return {
-    kpis: {
-      pageViews: { value: '142,730', change: '+12.5%' },
-      uniqueUsers: { value: '89,921', change: '+8.1%' },
-      bounceRate: { value: '41.8%', change: '-2.3%' },
-    },
-    liveVisitors: Math.floor(Math.random() * 200) + 50,
-    visitorData,
-    sources: [
-      { name: 'Google', visitors: 35420, change: '+22%' },
-      { name: 'Direct', visitors: 21043, change: '+5%' },
-      { name: 'X (Twitter)', visitors: 15888, change: '-8%' },
-      { name: 'Facebook', visitors: 9123, change: '+15%' },
-      { name: 'GitHub', visitors: 6543, change: '+3%' },
-    ],
-    deviceData: [
-      { name: 'Desktop', value: 45 },
-      { name: 'Mobile', value: 40 },
-      { name: 'Tablet', value: 15 },
-    ],
-  };
+    // 過去30日間のビジターデータを取得
+    const visitorDataResult = await client.query(
+      `SELECT DATE(timestamp) as date, COUNT(DISTINCT session_id) as visits
+       FROM page_views
+       WHERE project_id = $1 AND timestamp >= NOW() - INTERVAL '30 days'
+       GROUP BY DATE(timestamp)
+       ORDER BY date`,
+      [projectId]
+    );
+
+    const visitorData: DailyStat[] = visitorDataResult.rows.map(row => ({
+      date: new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      visits: parseInt(row.visits)
+    }));
+
+    // KPIデータを取得
+    const kpiResult = await client.query(
+      `SELECT 
+         COUNT(*) as total_page_views,
+         COUNT(DISTINCT session_id) as unique_users,
+         COUNT(DISTINCT CASE WHEN timestamp > NOW() - INTERVAL '5 minutes' THEN session_id END) as live_visitors
+       FROM page_views
+       WHERE project_id = $1`,
+      [projectId]
+    );
+
+    const kpiData = kpiResult.rows[0];
+    const totalPageViews = parseInt(kpiData.total_page_views) || 0;
+    const uniqueUsers = parseInt(kpiData.unique_users) || 0;
+    const liveVisitors = parseInt(kpiData.live_visitors) || 0;
+
+    // ソース別データを取得
+    const sourcesResult = await client.query(
+      `SELECT referrer, COUNT(DISTINCT session_id) as visitors
+       FROM page_views
+       WHERE project_id = $1 AND referrer IS NOT NULL AND referrer != ''
+       GROUP BY referrer
+       ORDER BY visitors DESC
+       LIMIT 5`,
+      [projectId]
+    );
+
+    const sources: Source[] = sourcesResult.rows.map(row => ({
+      name: row.referrer || 'Direct',
+      visitors: parseInt(row.visitors),
+      change: '+0%' // 実際の実装では前日比を計算
+    }));
+
+    // デバイス別データを取得
+    const deviceResult = await client.query(
+      `SELECT device_type, COUNT(DISTINCT session_id) as count
+       FROM page_views
+       WHERE project_id = $1
+       GROUP BY device_type`,
+      [projectId]
+    );
+
+    const totalSessions = deviceResult.rows.reduce((sum, row) => sum + parseInt(row.count), 0);
+    const deviceData: DeviceData[] = deviceResult.rows.map(row => ({
+      name: row.device_type || 'Unknown',
+      value: totalSessions > 0 ? Math.round((parseInt(row.count) / totalSessions) * 100) : 0
+    }));
+
+    return {
+      kpis: {
+        pageViews: { value: totalPageViews.toLocaleString(), change: '+0%' },
+        uniqueUsers: { value: uniqueUsers.toLocaleString(), change: '+0%' },
+        bounceRate: { value: '0%', change: '0%' }, // 実際の実装では計算
+      },
+      liveVisitors,
+      visitorData,
+      sources,
+      deviceData,
+    };
+  } finally {
+    client.release();
+  }
 };
 
 export default async function handler(req: Request): Promise<Response> {
@@ -140,11 +199,27 @@ export default async function handler(req: Request): Promise<Response> {
     );
   }
 
+  const client = await pool.connect();
   try {
     if (req.method === 'GET') {
+      // プロジェクトの権限チェック
+      const projectResult = await client.query('SELECT * FROM projects WHERE id = $1', [projectId]);
+      if (projectResult.rows.length === 0) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'プロジェクトが見つかりません' }),
+          { status: 404, headers }
+        );
+      }
+      const project = projectResult.rows[0];
+      if (user.role !== 'admin' && project.user_id !== user.id) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'アクセスが拒否されました' }),
+          { status: 403, headers }
+        );
+      }
+
       // アナリティクスデータ取得
-      // 実際の実装では、データベースからプロジェクトIDに基づいてデータを取得
-      const analyticsData = generateAnalyticsData();
+      const analyticsData = await getAnalyticsData(projectId);
 
       return new Response(
         JSON.stringify({
@@ -168,5 +243,7 @@ export default async function handler(req: Request): Promise<Response> {
       }),
       { status: 500, headers }
     );
+  } finally {
+    client.release();
   }
 } 
