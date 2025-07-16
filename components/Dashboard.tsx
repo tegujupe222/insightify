@@ -30,11 +30,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
   const [currentPage, setCurrentPage] = useState('dashboard');
   
   // Mock subscription data - replace with actual API call
-  const [subscriptionData, setSubscriptionData] = useState({
-    currentPlan: 'free' as 'free' | 'premium' | 'pending',
-    monthlyPageViews: 2500,
-    pageViewsLimit: 3000
-  });
+  const [subscriptionData, setSubscriptionData] = useState<{
+    currentPlan: 'free' | 'premium' | 'pending';
+    monthlyPageViews: number;
+    pageViewsLimit: number;
+    subscriptionPlan: 'monthly' | 'yearly' | null;
+  } | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -99,18 +101,81 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
     fetchData();
   }, [project, showToast]);
 
-  const handleUpgrade = (planType: 'monthly' | 'yearly') => {
-    // Mock implementation - replace with actual API call
-    console.log('Upgrading to:', planType);
-    setSubscriptionData(prev => ({
-      ...prev,
-      currentPlan: 'pending'
-    }));
-    
-    // Simulate API call
-    setTimeout(() => {
-      alert('アップグレードリクエストが送信されました。管理者が確認後、プレミアム機能が有効になります。');
-    }, 1000);
+  // サブスクリプション情報取得
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      setSubscriptionLoading(true);
+      try {
+        const token = localStorage.getItem('jwt');
+        if (!token) throw new Error('認証トークンが見つかりません');
+        const res = await fetch('/api/subscriptions/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (!res.ok) throw new Error('サブスクリプション情報の取得に失敗しました');
+        const result = await res.json();
+        if (result.success) {
+          setSubscriptionData({
+            currentPlan: result.data.user.subscriptionStatus,
+            monthlyPageViews: result.data.user.monthlyPageViews,
+            pageViewsLimit: result.data.user.pageViewsLimit,
+            subscriptionPlan: result.data.user.subscriptionPlan || null
+          });
+        } else {
+          throw new Error(result.error || 'サブスクリプション情報の取得に失敗しました');
+        }
+      } catch (error) {
+        showToast({
+          type: 'error',
+          title: 'エラー',
+          message: error instanceof Error ? error.message : 'サブスクリプション情報の取得に失敗しました',
+          duration: 5000
+        });
+        setSubscriptionData(null);
+      } finally {
+        setSubscriptionLoading(false);
+      }
+    };
+    fetchSubscription();
+  }, [user]);
+
+  // サブスクリプションアップグレード
+  const handleUpgrade = async (planType: 'monthly' | 'yearly') => {
+    try {
+      const token = localStorage.getItem('jwt');
+      if (!token) throw new Error('認証トークンが見つかりません');
+      const res = await fetch('/api/subscriptions/upgrade', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ planType })
+      });
+      if (!res.ok) throw new Error('アップグレードリクエストの送信に失敗しました');
+      const result = await res.json();
+      if (result.success) {
+        showToast({
+          type: 'success',
+          title: 'アップグレード申請',
+          message: 'アップグレードリクエストが送信されました。管理者が確認後、プレミアム機能が有効になります。',
+          duration: 5000
+        });
+        // ステータスをpendingに更新
+        setSubscriptionData(prev => prev ? { ...prev, currentPlan: 'pending' } : prev);
+      } else {
+        throw new Error(result.error || 'アップグレードリクエストの送信に失敗しました');
+      }
+    } catch (error) {
+      showToast({
+        type: 'error',
+        title: 'エラー',
+        message: error instanceof Error ? error.message : 'アップグレードリクエストの送信に失敗しました',
+        duration: 5000
+      });
+    }
   };
 
   if (loading || !data) {
@@ -120,6 +185,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
           <Icon name="loader" className="h-8 w-8 text-indigo-400" />
           <span className={`text-xl font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
             {t('common.loading')} {project?.name || 'Dashboard'}...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (subscriptionLoading || !subscriptionData) {
+    return (
+      <div className={`flex items-center justify-center min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className="flex items-center space-x-3">
+          <Icon name="loader" className="h-8 w-8 text-indigo-400" />
+          <span className={`text-xl font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            サブスクリプション情報を取得中...
           </span>
         </div>
       </div>
