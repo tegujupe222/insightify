@@ -102,10 +102,31 @@ export class UserModel {
   }
 
   static async incrementPageViews(id: string): Promise<User | null> {
+    // まずユーザー情報を取得して管理者かどうかチェック
+    const user = await this.findById(id);
+    if (!user) {
+      return null;
+    }
+
+    // 管理者の場合は制限チェックをスキップ
+    if (user.role === 'admin') {
+      const query = `
+        UPDATE users 
+        SET monthly_page_views = monthly_page_views + 1, updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `;
+      
+      const result = await pool.query(query, [id]);
+      return result.rows[0] || null;
+    }
+
+    // 一般ユーザーの場合は制限チェック
     const query = `
       UPDATE users 
       SET monthly_page_views = monthly_page_views + 1, updated_at = NOW()
-      WHERE id = $1
+      WHERE id = $1 
+      AND (subscription_status = 'premium' OR monthly_page_views < page_views_limit)
       RETURNING *
     `;
     
@@ -122,6 +143,7 @@ export class UserModel {
     const query = `
       SELECT * FROM users 
       WHERE subscription_status = 'free' 
+      AND role != 'admin'
       AND monthly_page_views >= (page_views_limit * $1)
       ORDER BY monthly_page_views DESC
     `;
@@ -134,6 +156,7 @@ export class UserModel {
     const query = `
       SELECT * FROM users 
       WHERE subscription_status = 'free' 
+      AND role != 'admin'
       AND monthly_page_views >= page_views_limit
       ORDER BY monthly_page_views DESC
     `;

@@ -46,6 +46,8 @@ export default async function handler(req: any, res: any) {
     }
 
     // Return user info in the format expected by frontend
+    // 管理者の場合は常にpremium・無制限
+    const isAdmin = decoded.role === 'admin';
     return res.status(200).json({
       success: true,
       data: {
@@ -54,9 +56,9 @@ export default async function handler(req: any, res: any) {
           email: decoded.email,
           role: decoded.role || 'user',
           name: decoded.name || 'User',
-          subscriptionStatus: decoded.subscriptionStatus || 'free',
+          subscriptionStatus: isAdmin ? 'premium' : (decoded.subscriptionStatus || 'free'),
           monthlyPageViews: decoded.monthlyPageViews || 0,
-          pageViewsLimit: decoded.pageViewsLimit || 3000
+          pageViewsLimit: isAdmin ? 99999999 : (decoded.pageViewsLimit || 3000)
         }
       },
       message: 'User information retrieved successfully'

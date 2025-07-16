@@ -40,7 +40,11 @@ export const calculatePageViewsLimit = (subscriptionStatus: string): number => {
   }
 };
 
-export const checkPageViewsLimit = (currentViews: number, limit: number): boolean => {
+export const checkPageViewsLimit = (currentViews: number, limit: number, userRole?: string): boolean => {
+  // 管理者の場合は制限チェックをスキップ
+  if (userRole === 'admin') {
+    return true;
+  }
   return currentViews < limit;
 };
 

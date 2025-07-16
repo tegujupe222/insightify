@@ -22,6 +22,32 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
   pageViewsLimit,
   onUpgrade
 }) => {
+  // 管理者の場合は課金UIを非表示
+  const isAdmin = currentPlan === 'premium' && pageViewsLimit > 1000000;
+  
+  if (isAdmin) {
+    return (
+      <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6 rounded-xl text-white">
+        <div className="flex items-center space-x-3 mb-4">
+          <Icon name="shield" className="h-8 w-8" />
+          <div>
+            <h3 className="text-xl font-bold">管理者アカウント</h3>
+            <p className="text-purple-100">全機能が無制限で利用可能です</p>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span>ページビュー数</span>
+            <span className="font-bold">無制限</span>
+          </div>
+          <div className="flex justify-between">
+            <span>現在の使用量</span>
+            <span className="font-bold">{monthlyPageViews.toLocaleString()} PV</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showBankInfo, setShowBankInfo] = useState(false);

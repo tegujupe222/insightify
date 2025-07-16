@@ -13,16 +13,7 @@ interface AuthUser {
   role: string;
 }
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  lastLogin: string;
-  projectCount: number;
-  status: 'Active' | 'Inactive';
-  role?: 'admin' | 'user';
-  isBanned?: boolean;
-}
+
 
 // 認証ミドルウェア
 const authenticateToken = (req: VercelRequest): AuthUser | null => {

@@ -35,13 +35,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // デコードされたトークンからユーザー情報を返す（データベース接続なし）
+        // 管理者の場合は常にpremium・無制限
+        const isAdmin = decoded.role === 'admin';
         const user = {
           id: decoded.userId || decoded.id,
           email: decoded.email,
           role: decoded.role,
-          subscriptionStatus: decoded.subscriptionStatus || 'free',
+          subscriptionStatus: isAdmin ? 'premium' : (decoded.subscriptionStatus || 'free'),
           monthlyPageViews: decoded.monthlyPageViews || 0,
-          pageViewsLimit: decoded.pageViewsLimit || 3000
+          pageViewsLimit: isAdmin ? 99999999 : (decoded.pageViewsLimit || 3000)
         };
 
         res.status(200).json({
