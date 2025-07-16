@@ -11,7 +11,7 @@ export class ProjectModel {
     const allDomains = domains.includes(url) ? domains : [url, ...domains];
     
     const trackingCode = `<!-- Insightify Tracking Snippet for ${name} -->
-<script async defer src="https://cdn.insightify.com/tracker.js" data-project-id="${id}"></script>`;
+<script async defer src="${process.env.NODE_ENV === 'production' ? 'https://insightify.vercel.app' : 'http://localhost:3000'}/tracker/tracker.js" data-project-id="${id}"></script>`;
     
     const query = `
       INSERT INTO projects (id, name, url, domains, user_id, tracking_code, is_active)
@@ -76,7 +76,7 @@ export class ProjectModel {
     if (!project) return null;
 
     const newTrackingCode = `<!-- Insightify Tracking Snippet for ${project.name} -->
-<script async defer src="https://cdn.insightify.com/tracker.js" data-project-id="${id}"></script>`;
+<script async defer src="${process.env.NODE_ENV === 'production' ? 'https://insightify.vercel.app' : 'http://localhost:3000'}/tracker/tracker.js" data-project-id="${id}"></script>`;
     
     return this.update(id, { trackingCode: newTrackingCode });
   }
