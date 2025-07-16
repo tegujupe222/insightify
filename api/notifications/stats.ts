@@ -1,33 +1,24 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { EmailNotificationModel } from '../../backend/src/models/EmailNotification';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
   try {
-    // TODO: Implement actual notification stats calculation
-    // For now, return mock data
-    const mockStats = {
-      total: 150,
-      sent: 120,
-      failed: 15,
-      pending: 15,
-      byType: {
-        upgrade_recommended: 50,
-        subscription_requested: 30,
-        subscription_activated: 25,
-        payment_confirmed: 20,
-        limit_warning: 25
-      }
-    };
-
+    const stats = await EmailNotificationModel.getStats();
     res.status(200).json({
       success: true,
-      data: mockStats
+      data: stats,
+      message: 'Notification stats fetched successfully'
     });
   } catch (error) {
     console.error('Notification stats error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch notification stats',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 } 

@@ -154,7 +154,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
         }
     };
 
-    const handleAddProject = async (name: string, url: string) => {
+    // プロジェクト削除ハンドラ
+    const handleDeleteProject = async (projectId: string) => {
+        if (!window.confirm('このプロジェクトを削除しますか？この操作は取り消せません。')) {
+            return;
+        }
+        try {
+            const token = localStorage.getItem('jwt');
+            if (!token) throw new Error('認証トークンが見つかりません');
+            const response = await fetch(`/api/projects/${projectId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) throw new Error('プロジェクトの削除に失敗しました');
+            const result = await response.json();
+            if (result.success) {
+                setProjects(prev => prev.filter(p => p.id !== projectId));
+                showToast({
+                    type: 'success',
+                    title: '削除完了',
+                    message: 'プロジェクトが削除されました',
+                    duration: 3000
+                });
+            } else {
+                throw new Error(result.error || 'プロジェクトの削除に失敗しました');
+            }
+        } catch (error) {
+            console.error('Failed to delete project:', error);
+            showToast({
+                type: 'error',
+                title: '削除エラー',
+                message: error instanceof Error ? error.message : 'プロジェクトの削除に失敗しました',
+                duration: 5000
+            });
+        }
+    };
+
+    const handleAddProject = async (name: string, url: string, domains: string[] = []) => {
         try {
             const token = localStorage.getItem('jwt');
             if (!token) {
@@ -167,7 +206,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name, url, domains: [] })
+                body: JSON.stringify({ name, url, domains })
             });
 
             if (!response.ok) {
@@ -259,16 +298,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
                                     <p className="text-gray-500 text-sm">新しいプロジェクトを作成してください</p>
                                 </div>
                             ) : (
-                                projects.map((project) => (
-                                    <div key={project.id} className="bg-gray-700 p-4 rounded-lg border border-gray-600">
-                                        <h3 className="text-lg font-medium text-white mb-2">{project.name}</h3>
-                                        <p className="text-gray-300 text-sm mb-2">{project.url}</p>
-                                        <div className="flex items-center space-x-2 text-xs text-gray-400">
-                                            <Icon name="clock" className="h-3 w-3" />
-                                            <span>{project.createdAt instanceof Date ? project.createdAt.toLocaleDateString() : new Date(project.createdAt).toLocaleDateString()}</span>
-                                        </div>
-                                    </div>
-                                ))
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead>
+                                        <tr>
+                                            <th>プロジェクト名</th>
+                                            <th>URL</th>
+                                            <th>ドメイン</th>
+                                            <th>作成日</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {projects.map(project => (
+                                            <tr key={project.id}>
+                                                <td>{project.name}</td>
+                                                <td>{project.url}</td>
+                                                <td>
+                                                    {(project.domains ?? []).length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {(project.domains ?? []).map((domain: string, idx: number) => (
+                                                                <span
+                                                                    key={idx}
+                                                                    className="inline-block bg-gray-600 text-gray-100 px-2 py-0.5 rounded text-xs cursor-pointer hover:bg-indigo-600"
+                                                                    title={(project.domains ?? []).join('\n')}
+                                                                >
+                                                                    {domain}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-400 text-xs">-</span>
+                                                    )}
+                                                </td>
+                                                <td>{project.createdAt ? new Date(project.createdAt).toLocaleString() : '-'}</td>
+                                                <td>
+                                                    <button
+                                                        onClick={() => handleDeleteProject(project.id)}
+                                                        className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                                                    >
+                                                        削除
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             )}
                         </div>
                     </div>
