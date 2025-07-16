@@ -59,10 +59,16 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
         });
         if (response.ok) {
           const data = await response.json();
+          console.log('Realtime API response:', data);
           if (data.success && isMounted) {
-            setLiveVisitors(data.data.liveVisitors || []);
-            setRecentPageViews(data.data.recentPageViews || []);
-            setRecentEvents(data.data.recentEvents || []);
+            // APIレスポンスの構造に合わせて修正
+            const liveVisitorsData = data.data.liveVisitors || data.data;
+            const recentPageViewsData = data.data.recentPageViews || [];
+            const recentEventsData = data.data.recentEvents || [];
+            
+            setLiveVisitors(Array.isArray(liveVisitorsData) ? liveVisitorsData : []);
+            setRecentPageViews(Array.isArray(recentPageViewsData) ? recentPageViewsData : []);
+            setRecentEvents(Array.isArray(recentEventsData) ? recentEventsData : []);
           }
         } else {
           if (isMounted) {

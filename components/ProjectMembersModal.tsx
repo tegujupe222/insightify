@@ -55,8 +55,11 @@ export const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
       }
 
       const data = await response.json();
+      console.log('Project members API response:', data);
       if (data.success) {
-        setMembers(data.data.members);
+        // APIレスポンスの構造に合わせて修正
+        const membersData = data.data.members || data.data;
+        setMembers(Array.isArray(membersData) ? membersData : []);
       } else {
         throw new Error(data.error || 'メンバー情報の取得に失敗しました');
       }

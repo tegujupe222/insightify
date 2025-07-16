@@ -48,8 +48,11 @@ export const NotificationManagementTable: React.FC = () => {
     try {
       const response = await fetch('/api/notifications?limit=100');
       const data = await response.json();
+      console.log('Notifications API response:', data);
       if (data.success) {
-        setNotifications(data.data.notifications);
+        // APIレスポンスの構造に合わせて修正
+        const notificationsData = data.data.notifications || data.data;
+        setNotifications(Array.isArray(notificationsData) ? notificationsData : []);
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -62,6 +65,7 @@ export const NotificationManagementTable: React.FC = () => {
     try {
       const response = await fetch('/api/notifications/stats');
       const data = await response.json();
+      console.log('Stats API response:', data);
       if (data.success) {
         setStats(data.data);
       }

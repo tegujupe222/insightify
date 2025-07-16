@@ -8,7 +8,10 @@ export async function fetchUsers(token: string): Promise<User[]> {
   });
   if (!res.ok) throw new Error('Failed to fetch users');
   const data = await res.json();
-  return data.data.users;
+  console.log('UserApi fetchUsers response:', data);
+  // APIレスポンスの構造に合わせて修正
+  const usersData = data.data.users || data.data;
+  return Array.isArray(usersData) ? usersData : [];
 }
 
 export async function deleteUser(id: string, token: string): Promise<void> {

@@ -62,8 +62,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
         }
 
         const result = await response.json();
+        console.log('Analytics API response:', result);
         if (result.success) {
-          setData(result.data);
+          // APIレスポンスの構造に合わせて修正
+          const analyticsData = result.data.analytics || result.data;
+          setData(analyticsData);
         } else {
           throw new Error(result.error || 'アナリティクスデータの取得に失敗しました');
         }
