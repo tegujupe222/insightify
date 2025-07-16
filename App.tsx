@@ -19,7 +19,7 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import CancelPolicy from './components/CancelPolicy';
 import Terms from './components/Terms';
 
-const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthUser) => void; onLogout: () => void; loading: boolean; error: string | null; }> = ({ user, onLoginSuccess, onLogout, loading, error }) => {
+const AppContent: React.FC<{ user: AuthUser | null; onLogout: () => void; loading: boolean; error: string | null; }> = ({ user, onLogout, loading, error }) => {
   const { showToast } = useToast();
   const prevUserRef = React.useRef<AuthUser | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -217,7 +217,7 @@ const AppContent: React.FC<{ user: AuthUser | null; onLoginSuccess: (user: AuthU
   }
 
   if (!user) {
-    return <Login onLoginSuccess={onLoginSuccess} />;
+    return <Login />;
   }
 
   // プロジェクトが選択されている場合はダッシュボードを表示
@@ -370,7 +370,7 @@ const App: React.FC = () => {
             <Route path="/privacy-policy" element={<><PrivacyPolicy /><Footer /></>} />
             <Route path="/cancel-policy" element={<><CancelPolicy /><Footer /></>} />
             <Route path="/terms" element={<><Terms /><Footer /></>} />
-            <Route path="*" element={<><AppContent user={user} onLoginSuccess={handleLogin} onLogout={handleLogout} loading={loading} error={error} /><Footer /></>} />
+            <Route path="*" element={<><AppContent user={user} onLogout={handleLogout} loading={loading} error={error} /><Footer /></>} />
           </Routes>
         </ToastProvider>
       </ErrorBoundary>
