@@ -104,6 +104,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // userIdがusersテーブルに存在するかチェック
+      const userCheck = await client.query('SELECT id FROM users WHERE id = $1', [userId]);
+      if (userCheck.rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: '指定されたユーザーが存在しません（認証エラー）'
+        });
+      }
+
       // プロジェクトを作成（まずIDを生成）
       const projectId = randomUUID();
       const trackingCode = `<!-- Insightify Tracking Snippet for ${name} -->
