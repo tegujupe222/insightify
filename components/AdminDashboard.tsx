@@ -8,6 +8,7 @@ import { AddProjectModal } from './AddProjectModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useToast } from './Toast';
 import type { AuthUser, User, Project } from '../types';
+import { Navigation } from './Navigation';
 
 interface AdminDashboardProps {
     user: AuthUser;
@@ -379,51 +380,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
     };
     
     return (
-        <ErrorBoundary>
-            <div className="min-h-screen bg-gray-900 text-gray-200 font-sans">
-                <Header onLogout={onLogout} user={user} />
-                <main className="pt-16 p-4 sm:p-6 lg:p-8 max-w-screen-2xl mx-auto">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-white">Administrator Dashboard</h1>
-                        <p className="text-gray-400 mt-1">Manage users, subscriptions, and system settings.</p>
-                    </div>
-
-                    {/* Tab Navigation */}
-                    <div className="mb-6">
-                        <nav className="flex space-x-1 bg-gray-800 p-1 rounded-lg">
-                            {[
-                                { id: 'dashboard', label: 'Dashboard', icon: 'home' as const },
-                                { id: 'projects', label: 'Projects', icon: 'folder' as const },
-                                { id: 'users', label: 'Users', icon: 'users' as const },
-                                { id: 'subscriptions', label: 'Subscriptions', icon: 'credit-card' as const },
-                                { id: 'notifications', label: 'Notifications', icon: 'bell' as const }
-                            ].map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id as AdminTab)}
-                                    className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                        activeTab === tab.id
-                                            ? 'bg-indigo-600 text-white'
-                                            : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                                    }`}
-                                >
-                                    <Icon name={tab.icon} className="h-4 w-4" />
-                                    <span>{tab.label}</span>
-                                </button>
-                            ))}
-                        </nav>
-                    </div>
-
-                    {loading ? (
-                        <div className="flex items-center justify-center min-h-[50vh] text-white">
-                            <div className="flex items-center space-x-3">
-                            <Icon name="loader" className="h-8 w-8 text-indigo-400" />
-                            <span className="text-xl font-medium text-gray-300">Loading Data...</span>
-                            </div>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <Navigation
+                currentPage={activeTab}
+                onNavigate={(page) => setActiveTab(page as AdminTab)}
+                onLogout={onLogout}
+                user={user}
+            />
+            <div className="md:ml-64">
+                <Header user={user} onLogout={onLogout} />
+                <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <ErrorBoundary>
+                        {/* タブ切り替えUI・内容 */}
+                        <div className="mb-6">
+                            <nav className="flex space-x-1 bg-gray-800 p-1 rounded-lg">
+                                {[
+                                    { id: 'dashboard', label: 'Dashboard', icon: 'home' as const },
+                                    { id: 'projects', label: 'Projects', icon: 'folder' as const },
+                                    { id: 'users', label: 'Users', icon: 'users' as const },
+                                    { id: 'subscriptions', label: 'Subscriptions', icon: 'credit-card' as const },
+                                    { id: 'notifications', label: 'Notifications', icon: 'bell' as const }
+                                ].map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id as AdminTab)}
+                                        className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                            activeTab === tab.id
+                                                ? 'bg-indigo-600 text-white'
+                                                : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                                        }`}
+                                    >
+                                        <Icon name={tab.icon} className="h-4 w-4" />
+                                        <span>{tab.label}</span>
+                                    </button>
+                                ))}
+                            </nav>
                         </div>
-                    ) : (
-                        renderTabContent()
-                    )}
+
+                        {loading ? (
+                            <div className="flex items-center justify-center min-h-[50vh] text-white">
+                                <div className="flex items-center space-x-3">
+                                <Icon name="loader" className="h-8 w-8 text-indigo-400" />
+                                <span className="text-xl font-medium text-gray-300">Loading Data...</span>
+                                </div>
+                            </div>
+                        ) : (
+                            renderTabContent()
+                        )}
+                    </ErrorBoundary>
                 </main>
                 <footer className="text-center p-6 text-gray-500 text-sm">
                     <p>Insightify Analytics Platform &copy; 2024</p>
@@ -437,6 +441,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
                     />
                 )}
             </div>
-        </ErrorBoundary>
+        </div>
     );
 };

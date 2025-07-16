@@ -1,5 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { EmailService } from '../../backend/src/services/emailService';
+import { sendEmail } from './emailService';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         error: 'Email, subject, and content are required'
       });
     }
-    const sent = await EmailService.sendEmail(email, subject, content);
+    const sent = await sendEmail(email, subject, content);
     res.status(200).json({
       success: true,
       data: { sent },

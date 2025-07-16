@@ -1,5 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { EmailNotificationModel } from '../../backend/src/models/EmailNotification';
+import { EmailNotificationModel } from './EmailNotificationModel';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
