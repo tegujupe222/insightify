@@ -25,7 +25,10 @@ let projects: Project[] = [];
 
 // 認証ミドルウェア
 const authenticateToken = (req: Request): AuthUser | null => {
-  const authHeader = req.headers.get('authorization');
+  // Vercel環境とNode.js環境の両方に対応
+  const authHeader = (req.headers as any).get ? 
+    (req.headers as any).get('authorization') : 
+    (req.headers as any)['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
@@ -62,9 +65,17 @@ export default async function handler(req: Request): Promise<Response> {
     );
   }
 
-  // URLからプロジェクトIDを取得
-  const url = new URL(req.url);
-  const projectId = url.pathname.split('/').pop();
+  // URLからプロジェクトIDを取得（安全な方法）
+  let projectId: string | null = null;
+  
+  try {
+    const url = new URL(req.url);
+    projectId = url.pathname.split('/').pop() || null;
+  } catch (error) {
+    // URLが無効な場合は、パスから直接プロジェクトIDを抽出
+    const pathParts = req.url.split('/');
+    projectId = pathParts[pathParts.length - 1]?.split('?')[0] || null;
+  }
 
   if (!projectId) {
     return new Response(

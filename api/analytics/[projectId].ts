@@ -119,9 +119,17 @@ export default async function handler(req: Request): Promise<Response> {
     );
   }
 
-  // URLからプロジェクトIDを取得
-  const url = new URL(req.url);
-  const projectId = url.pathname.split('/').pop();
+  // URLからプロジェクトIDを取得（安全な方法）
+  let projectId: string | null = null;
+  
+  try {
+    const url = new URL(req.url);
+    projectId = url.pathname.split('/').pop() || null;
+  } catch (error) {
+    // URLが無効な場合は、パスから直接プロジェクトIDを抽出
+    const pathParts = req.url.split('/');
+    projectId = pathParts[pathParts.length - 1]?.split('?')[0] || null;
+  }
 
   if (!projectId) {
     return new Response(
