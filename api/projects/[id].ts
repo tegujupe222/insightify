@@ -69,7 +69,9 @@ export default async function handler(req: Request): Promise<Response> {
   let projectId: string | null = null;
   
   try {
-    const url = new URL(req.url);
+    // まずURLをクリーンアップ
+    const cleanUrl = req.url.split('?')[0]; // クエリパラメータを除去
+    const url = new URL(cleanUrl, 'http://localhost'); // ベースURLを追加
     projectId = url.pathname.split('/').pop() || null;
   } catch (error) {
     // URLが無効な場合は、パスから直接プロジェクトIDを抽出
