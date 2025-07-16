@@ -43,7 +43,10 @@ interface AnalyticsData {
 
 // 認証ミドルウェア
 const authenticateToken = (req: Request): AuthUser | null => {
-  const authHeader = req.headers.get('authorization');
+  // Vercel環境とNode.js環境の両方に対応
+  const authHeader = (req.headers as any).get ? 
+    (req.headers as any).get('authorization') : 
+    (req.headers as any)['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
