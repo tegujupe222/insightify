@@ -5,6 +5,7 @@ import { UserManagementTable } from './UserManagementTable';
 import { SubscriptionManagementTable } from './SubscriptionManagementTable';
 import { NotificationManagementTable } from './NotificationManagementTable';
 import { AddProjectModal } from './AddProjectModal';
+import { ErrorBoundary } from './ErrorBoundary';
 import { useToast } from './Toast';
 import type { AuthUser, User, Project } from '../types';
 
@@ -58,8 +59,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
                 if (projectsResponse.ok) {
                     const projectsResult = await projectsResponse.json();
                     if (projectsResult.success) {
-                        setProjects(projectsResult.data);
+                        // createdAtをDate型に変換
+                        const projectsWithDates = projectsResult.data.map((project: any) => ({
+                            ...project,
+                            createdAt: new Date(project.createdAt),
+                            updatedAt: new Date(project.updatedAt)
+                        }));
+                        setProjects(projectsWithDates);
                     }
+                } else {
+                    console.warn('Failed to fetch projects:', projectsResponse.status);
                 }
             } catch (error) {
                 console.error('Failed to fetch data:', error);
@@ -148,7 +157,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
 
             const result = await response.json();
             if (result.success) {
-                setProjects(prevProjects => [...prevProjects, result.data]);
+                // createdAtをDate型に変換して追加
+                const newProject = {
+                    ...result.data,
+                    createdAt: new Date(result.data.createdAt),
+                    updatedAt: new Date(result.data.updatedAt)
+                };
+                setProjects(prevProjects => [...prevProjects, newProject]);
                 setShowAddProjectModal(false);
                 showToast({
                     type: 'success',
@@ -218,16 +233,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
                             </button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {projects.map((project) => (
-                                <div key={project.id} className="bg-gray-700 p-4 rounded-lg border border-gray-600">
-                                    <h3 className="text-lg font-medium text-white mb-2">{project.name}</h3>
-                                    <p className="text-gray-300 text-sm mb-2">{project.url}</p>
-                                    <div className="flex items-center space-x-2 text-xs text-gray-400">
-                                        <Icon name="clock" className="h-3 w-3" />
-                                        <span>{new Date(project.createdAt).toLocaleDateString()}</span>
-                                    </div>
+                            {projects.length === 0 ? (
+                                <div className="col-span-full text-center py-8">
+                                    <Icon name="folder" className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+                                    <p className="text-gray-400">プロジェクトがありません</p>
+                                    <p className="text-gray-500 text-sm">新しいプロジェクトを作成してください</p>
                                 </div>
-                            ))}
+                            ) : (
+                                projects.map((project) => (
+                                    <div key={project.id} className="bg-gray-700 p-4 rounded-lg border border-gray-600">
+                                        <h3 className="text-lg font-medium text-white mb-2">{project.name}</h3>
+                                        <p className="text-gray-300 text-sm mb-2">{project.url}</p>
+                                        <div className="flex items-center space-x-2 text-xs text-gray-400">
+                                            <Icon name="clock" className="h-3 w-3" />
+                                            <span>{project.createdAt instanceof Date ? project.createdAt.toLocaleDateString() : new Date(project.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 );
@@ -258,62 +281,64 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
     };
     
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-200 font-sans">
-            <Header onLogout={onLogout} user={user} />
-            <main className="pt-16 p-4 sm:p-6 lg:p-8 max-w-screen-2xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-white">Administrator Dashboard</h1>
-                    <p className="text-gray-400 mt-1">Manage users, subscriptions, and system settings.</p>
-                </div>
-
-                {/* Tab Navigation */}
-                <div className="mb-6">
-                    <nav className="flex space-x-1 bg-gray-800 p-1 rounded-lg">
-                        {[
-                            { id: 'dashboard', label: 'Dashboard', icon: 'home' as const },
-                            { id: 'projects', label: 'Projects', icon: 'folder' as const },
-                            { id: 'users', label: 'Users', icon: 'users' as const },
-                            { id: 'subscriptions', label: 'Subscriptions', icon: 'credit-card' as const },
-                            { id: 'notifications', label: 'Notifications', icon: 'bell' as const }
-                        ].map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as AdminTab)}
-                                className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                    activeTab === tab.id
-                                        ? 'bg-indigo-600 text-white'
-                                        : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                                }`}
-                            >
-                                <Icon name={tab.icon} className="h-4 w-4" />
-                                <span>{tab.label}</span>
-                            </button>
-                        ))}
-                    </nav>
-                </div>
-
-                {loading ? (
-                    <div className="flex items-center justify-center min-h-[50vh] text-white">
-                        <div className="flex items-center space-x-3">
-                        <Icon name="loader" className="h-8 w-8 text-indigo-400" />
-                        <span className="text-xl font-medium text-gray-300">Loading Data...</span>
-                        </div>
+        <ErrorBoundary>
+            <div className="min-h-screen bg-gray-900 text-gray-200 font-sans">
+                <Header onLogout={onLogout} user={user} />
+                <main className="pt-16 p-4 sm:p-6 lg:p-8 max-w-screen-2xl mx-auto">
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-bold text-white">Administrator Dashboard</h1>
+                        <p className="text-gray-400 mt-1">Manage users, subscriptions, and system settings.</p>
                     </div>
-                ) : (
-                    renderTabContent()
-                )}
-            </main>
-            <footer className="text-center p-6 text-gray-500 text-sm">
-                <p>Insightify Analytics Platform &copy; 2024</p>
-            </footer>
 
-            {/* Add Project Modal */}
-            {showAddProjectModal && (
-                <AddProjectModal
-                    onClose={() => setShowAddProjectModal(false)}
-                    onAddProject={handleAddProject}
-                />
-            )}
-        </div>
+                    {/* Tab Navigation */}
+                    <div className="mb-6">
+                        <nav className="flex space-x-1 bg-gray-800 p-1 rounded-lg">
+                            {[
+                                { id: 'dashboard', label: 'Dashboard', icon: 'home' as const },
+                                { id: 'projects', label: 'Projects', icon: 'folder' as const },
+                                { id: 'users', label: 'Users', icon: 'users' as const },
+                                { id: 'subscriptions', label: 'Subscriptions', icon: 'credit-card' as const },
+                                { id: 'notifications', label: 'Notifications', icon: 'bell' as const }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id as AdminTab)}
+                                    className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                        activeTab === tab.id
+                                            ? 'bg-indigo-600 text-white'
+                                            : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                                    }`}
+                                >
+                                    <Icon name={tab.icon} className="h-4 w-4" />
+                                    <span>{tab.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+                    </div>
+
+                    {loading ? (
+                        <div className="flex items-center justify-center min-h-[50vh] text-white">
+                            <div className="flex items-center space-x-3">
+                            <Icon name="loader" className="h-8 w-8 text-indigo-400" />
+                            <span className="text-xl font-medium text-gray-300">Loading Data...</span>
+                            </div>
+                        </div>
+                    ) : (
+                        renderTabContent()
+                    )}
+                </main>
+                <footer className="text-center p-6 text-gray-500 text-sm">
+                    <p>Insightify Analytics Platform &copy; 2024</p>
+                </footer>
+
+                {/* Add Project Modal */}
+                {showAddProjectModal && (
+                    <AddProjectModal
+                        onClose={() => setShowAddProjectModal(false)}
+                        onAddProject={handleAddProject}
+                    />
+                )}
+            </div>
+        </ErrorBoundary>
     );
 };
