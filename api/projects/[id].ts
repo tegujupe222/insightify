@@ -1,4 +1,10 @@
 import jwt from 'jsonwebtoken';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
 interface Project {
   id: string;
@@ -17,11 +23,6 @@ interface AuthUser {
   email: string;
   role: string;
 }
-
-// 簡易的なインメモリストレージ（本番ではデータベースを使用）
-// 注意: この配列はapi/projects/index.tsと同じものを参照する必要があります
-// 実際の実装では、データベースや共有ストレージを使用してください
-let projects: Project[] = [];
 
 // 認証ミドルウェア
 const authenticateToken = (req: Request): AuthUser | null => {
@@ -86,20 +87,27 @@ export default async function handler(req: Request): Promise<Response> {
     );
   }
 
+  const client = await pool.connect();
+  
   try {
     if (req.method === 'GET') {
       // プロジェクト詳細取得
-      const project = projects.find(p => p.id === projectId);
+      const result = await client.query(
+        'SELECT * FROM projects WHERE id = $1',
+        [projectId]
+      );
 
-      if (!project) {
+      if (result.rows.length === 0) {
         return new Response(
           JSON.stringify({ success: false, error: 'プロジェクトが見つかりません' }),
           { status: 404, headers }
         );
       }
 
+      const project = result.rows[0];
+
       // アクセス権限チェック
-      if (user.role !== 'admin' && project.userId !== user.id) {
+      if (user.role !== 'admin' && project.user_id !== user.id) {
         return new Response(
           JSON.stringify({ success: false, error: 'アクセスが拒否されました' }),
           { status: 403, headers }
@@ -115,17 +123,22 @@ export default async function handler(req: Request): Promise<Response> {
       );
     } else if (req.method === 'PUT') {
       // プロジェクト更新
-      const project = projects.find(p => p.id === projectId);
+      const result = await client.query(
+        'SELECT * FROM projects WHERE id = $1',
+        [projectId]
+      );
 
-      if (!project) {
+      if (result.rows.length === 0) {
         return new Response(
           JSON.stringify({ success: false, error: 'プロジェクトが見つかりません' }),
           { status: 404, headers }
         );
       }
 
+      const project = result.rows[0];
+
       // アクセス権限チェック
-      if (user.role !== 'admin' && project.userId !== user.id) {
+      if (user.role !== 'admin' && project.user_id !== user.id) {
         return new Response(
           JSON.stringify({ success: false, error: 'アクセスが拒否されました' }),
           { status: 403, headers }
@@ -135,11 +148,19 @@ export default async function handler(req: Request): Promise<Response> {
       const body = await req.json();
       const { name, url, isActive } = body;
 
-      if (name !== undefined) project.name = name;
+      const updateFields = [];
+      const updateValues = [];
+      let paramCount = 1;
+
+      if (name !== undefined) {
+        updateFields.push(`name = $${paramCount++}`);
+        updateValues.push(name);
+      }
       if (url !== undefined) {
         try {
           new URL(url);
-          project.url = url;
+          updateFields.push(`url = $${paramCount++}`);
+          updateValues.push(url);
         } catch {
           return new Response(
             JSON.stringify({
@@ -150,40 +171,54 @@ export default async function handler(req: Request): Promise<Response> {
           );
         }
       }
-      if (isActive !== undefined) project.isActive = isActive;
-      project.updatedAt = new Date();
+      if (isActive !== undefined) {
+        updateFields.push(`is_active = $${paramCount++}`);
+        updateValues.push(isActive);
+      }
+
+      if (updateFields.length > 0) {
+        updateFields.push(`updated_at = NOW()`);
+        updateValues.push(projectId);
+
+        await client.query(
+          `UPDATE projects SET ${updateFields.join(', ')} WHERE id = $${paramCount}`,
+          updateValues
+        );
+      }
 
       return new Response(
         JSON.stringify({
           success: true,
-          data: { project },
           message: 'プロジェクトが正常に更新されました'
         }),
         { status: 200, headers }
       );
     } else if (req.method === 'DELETE') {
       // プロジェクト削除
-      const projectIndex = projects.findIndex(p => p.id === projectId);
+      const result = await client.query(
+        'SELECT * FROM projects WHERE id = $1',
+        [projectId]
+      );
 
-      if (projectIndex === -1) {
+      if (result.rows.length === 0) {
         return new Response(
           JSON.stringify({ success: false, error: 'プロジェクトが見つかりません' }),
           { status: 404, headers }
         );
       }
 
-      const project = projects[projectIndex];
+      const project = result.rows[0];
 
       // アクセス権限チェック
-      if (user.role !== 'admin' && project.userId !== user.id) {
+      if (user.role !== 'admin' && project.user_id !== user.id) {
         return new Response(
           JSON.stringify({ success: false, error: 'アクセスが拒否されました' }),
           { status: 403, headers }
         );
       }
 
-      // プロジェクトを削除
-      projects.splice(projectIndex, 1);
+      // プロジェクトを削除（関連データも削除）
+      await client.query('DELETE FROM projects WHERE id = $1', [projectId]);
 
       return new Response(
         JSON.stringify({
@@ -207,5 +242,7 @@ export default async function handler(req: Request): Promise<Response> {
       }),
       { status: 500, headers }
     );
+  } finally {
+    client.release();
   }
 } 

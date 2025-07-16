@@ -1,4 +1,10 @@
 import jwt from 'jsonwebtoken';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
 interface AuthUser {
   id: string;
@@ -77,6 +83,8 @@ export default async function handler(req: Request): Promise<Response> {
     );
   }
 
+  const client = await pool.connect();
+  
   try {
     if (req.method === 'DELETE') {
       // 自分自身を削除しようとしている場合のチェック
@@ -87,8 +95,21 @@ export default async function handler(req: Request): Promise<Response> {
         );
       }
 
-      // 実際の実装では、データベースからユーザーを削除
-      // ここでは成功レスポンスを返す（ダミー実装）
+      // ユーザーが存在するかチェック
+      const userResult = await client.query(
+        'SELECT * FROM users WHERE id = $1',
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'ユーザーが見つかりません' }),
+          { status: 404, headers }
+        );
+      }
+
+      // ユーザーを削除（関連データも削除）
+      await client.query('DELETE FROM users WHERE id = $1', [userId]);
       
       return new Response(
         JSON.stringify({
@@ -112,5 +133,7 @@ export default async function handler(req: Request): Promise<Response> {
       }),
       { status: 500, headers }
     );
+  } finally {
+    client.release();
   }
 } 
