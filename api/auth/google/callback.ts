@@ -21,15 +21,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
     const { data } = await oauth2.userinfo.get();
 
-    // 必要なユーザー情報を抽出
-    const user = {
-      id: data.id,
+    // JWTペイロードを統一（userIdフィールドを使用）
+    const jwtPayload = {
+      userId: data.id, // idではなくuserIdを使用
       email: data.email,
       name: data.name,
       role: 'user'
     };
 
-    const token = jwt.sign(user, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: '7d' });
+    const token = jwt.sign(jwtPayload, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: '7d' });
 
     const frontendUrl = process.env.FRONTEND_URL || 'https://insightify-eight.vercel.app';
     res.redirect(`${frontendUrl}/auth/callback?token=${token}`);

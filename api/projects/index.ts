@@ -26,18 +26,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const token = authHeader.replace('Bearer ', '');
   const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
   
+  // JWTからユーザーIDを取得（userIdまたはidのいずれかを使用）
   const userId = decoded.userId || decoded.id;
 
-  // UUIDバリデーション関数
-  function isValidUUID(uuid: string): boolean {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid);
-  }
-  if (!isValidUUID(userId)) {
+  // ユーザーIDの存在チェックのみ行う（UUIDバリデーションは削除）
+  if (!userId) {
     return res.status(400).json({
       success: false,
-      error: 'ユーザーIDが不正です'
+      error: 'ユーザーIDが見つかりません'
     });
   }
+
   const client = await pool.connect();
   
   try {

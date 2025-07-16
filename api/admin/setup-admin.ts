@@ -70,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const user = userResult.rows[0];
             newToken = jwt.sign(
               {
-                id: user.id,
+                userId: user.id, // idではなくuserIdを使用
                 email: user.email,
                 role: user.role,
                 subscriptionStatus: user.subscription_status || 'free',
