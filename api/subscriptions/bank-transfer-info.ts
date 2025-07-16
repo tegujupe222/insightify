@@ -11,29 +11,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
   try {
-    // TODO: Implement actual bank transfer info retrieval
-    // For now, return mock data
-    const mockBankInfo = {
-      bankName: 'サンプル銀行',
-      accountNumber: '1234567',
-      accountName: 'IGA factory',
-      branchCode: '001',
-      swiftCode: 'SMPLJPJT',
-      routingNumber: '123456789'
+    // 本番銀行振込情報（backend/src/config/bankInfo.tsと同じ内容）
+    const bankInfo = {
+      bankName: '神戸信用金庫',
+      branchName: '本店',
+      accountType: '普通',
+      accountNumber: '0726786',
+      accountHolder: 'ｲｶﾞｻｷ ｺﾞｳﾀ',
+      accountHolderKana: 'イガサキ ゴウタ',
+      contactEmail: 'igafactory2023@gmail.com'
     };
 
     res.status(200).json({
       success: true,
-      data: {
-        bankInfo: mockBankInfo
-      }
+      data: { bankInfo },
+      message: 'Bank transfer info fetched successfully'
     });
   } catch (error) {
     console.error('Bank transfer info error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch bank transfer info',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 } 
