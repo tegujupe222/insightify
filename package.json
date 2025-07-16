@@ -13,6 +13,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/jwt-decode": "^2.2.1",
     "@types/pg": "^8.15.4",
+    "@types/uuid": "^10.0.0",
     "@vercel/node": "^5.3.5",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -33,7 +34,8 @@
     "react-i18next": "^15.6.0",
     "react-router-dom": "^7.6.3",
     "recharts": "^3.1.0",
-    "socket.io-client": "^4.7.4"
+    "socket.io-client": "^4.7.4",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/express-session": "^1.18.2",
