@@ -41,18 +41,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const client = await pool.connect();
   
   try {
+    // project_membersテーブルが存在しない場合は作成
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS project_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(20) NOT NULL CHECK (role IN ('owner', 'editor', 'viewer')),
+        invited_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(project_id, user_id)
+      )
+    `);
+
     if (req.method === 'GET') {
-      // プロジェクト一覧取得（自分のプロジェクト + 共有されているプロジェクト）
+      // プロジェクト一覧取得（自分のプロジェクトのみ）
       const projectsResult = await client.query(
-        `SELECT DISTINCT p.*, 
-                CASE 
-                  WHEN p.user_id = $1 THEN 'owner'
-                  ELSE pm.role
-                END as user_role,
-                pm.joined_at
+        `SELECT p.*, 'owner' as user_role, p.created_at as joined_at
          FROM projects p
-         LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $1
-         WHERE p.user_id = $1 OR pm.user_id = $1
+         WHERE p.user_id = $1
          ORDER BY p.created_at DESC`,
         [userId]
       );
@@ -116,7 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // プロジェクトを作成（まずIDを生成）
       const projectId = randomUUID();
       const trackingCode = `<!-- Insightify Tracking Snippet for ${name} -->
-<script async defer src="${process.env.NODE_ENV === 'production' ? 'https://insightify.vercel.app' : 'http://localhost:3000'}/tracker/tracker.js" data-project-id="${projectId}"></script>`;
+<script async defer src="${process.env.NODE_ENV === 'production' ? 'https://insightify-eight.vercel.app' : 'http://localhost:3000'}/tracker/tracker.js" data-project-id="${projectId}"></script>`;
 
       const projectResult = await client.query(
         `INSERT INTO projects (id, name, url, domains, user_id, tracking_code, is_active)
