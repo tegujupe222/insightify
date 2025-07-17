@@ -441,7 +441,7 @@ export class AnalyticsModel {
   // Get filtered analytics data
   static async getFilteredData(projectId: string, startDate: Date, endDate: Date, filters: any, limit: number = 100): Promise<any> {
     // Build WHERE conditions for filters
-    const conditions: string[] = [`project_id = $1`, `timestamp BETWEEN $2 AND $3`];
+    const conditions: string[] = ['project_id = $1', 'timestamp BETWEEN $2 AND $3'];
     const values: any[] = [projectId, startDate, endDate];
     let paramIndex = 4;
 
@@ -512,11 +512,11 @@ export class AnalyticsModel {
   // Get data for export
   static async getExportData(projectId: string, type: string, startDate: Date, endDate: Date, _filters: any = {}): Promise<any[]> {
     let query = '';
-    let values = [projectId, startDate, endDate];
+    const values = [projectId, startDate, endDate];
 
     switch (type) {
-      case 'pageviews':
-        query = `
+    case 'pageviews':
+      query = `
           SELECT 
             timestamp,
             page_url,
@@ -530,10 +530,10 @@ export class AnalyticsModel {
           WHERE project_id = $1 AND timestamp BETWEEN $2 AND $3
           ORDER BY timestamp DESC
         `;
-        break;
+      break;
       
-      case 'events':
-        query = `
+    case 'events':
+      query = `
           SELECT 
             timestamp,
             event_type,
@@ -544,10 +544,10 @@ export class AnalyticsModel {
           WHERE project_id = $1 AND timestamp BETWEEN $2 AND $3
           ORDER BY timestamp DESC
         `;
-        break;
+      break;
       
-      case 'sessions':
-        query = `
+    case 'sessions':
+      query = `
           SELECT 
             start_time,
             end_time,
@@ -561,10 +561,10 @@ export class AnalyticsModel {
           WHERE project_id = $1 AND start_time BETWEEN $2 AND $3
           ORDER BY start_time DESC
         `;
-        break;
+      break;
       
-      default:
-        throw new Error('Invalid export type');
+    default:
+      throw new Error('Invalid export type');
     }
 
     const result = await pool.query(query, values);

@@ -5,7 +5,7 @@ import { validateInput, commonValidations } from '../middleware/security';
 const router = Router();
 
 // 全ユーザー取得（管理者のみ）
-router.get('/', async (_req, res) => {
+router.get('/', async(_req, res) => {
   try {
     const users = await UserModel.findAll();
     res.json({
@@ -22,7 +22,7 @@ router.get('/', async (_req, res) => {
 });
 
 // ユーザー詳細取得
-router.get('/:id', async (req, res) => {
+router.get('/:id', async(req, res) => {
   try {
     const user = await UserModel.findById(req.params.id);
     if (!user) {
@@ -47,7 +47,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // ユーザー更新
-router.put('/:id', validateInput([commonValidations.email]), async (req, res) => {
+router.put('/:id', validateInput([commonValidations.email]), async(req, res) => {
   try {
     const { email, role, subscriptionStatus } = req.body;
     const updates: any = {};
@@ -79,7 +79,7 @@ router.put('/:id', validateInput([commonValidations.email]), async (req, res) =>
 });
 
 // ユーザー削除
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async(req, res) => {
   try {
     const success = await UserModel.delete(req.params.id);
     if (!success) {
@@ -104,7 +104,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // 制限に近いユーザー取得
-router.get('/near-limit/:threshold?', async (req, res) => {
+router.get('/near-limit/:threshold?', async(req, res) => {
   try {
     const threshold = parseFloat(req.params.threshold || '0.8');
     const users = await UserModel.getUsersNearLimit(threshold);
@@ -123,7 +123,7 @@ router.get('/near-limit/:threshold?', async (req, res) => {
 });
 
 // 制限に達したユーザー取得
-router.get('/at-limit/all', async (_req, res) => {
+router.get('/at-limit/all', async(_req, res) => {
   try {
     const users = await UserModel.getUsersAtLimit();
     

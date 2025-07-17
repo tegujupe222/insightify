@@ -126,7 +126,7 @@ class CacheManager {
     hitRate: number;
     totalHits: number;
     totalRequests: number;
-  } {
+    } {
     let totalHits = 0;
     let totalRequests = 0;
 
@@ -201,7 +201,7 @@ export const cache = {
 };
 
 // デコレータ風のキャッシュ関数
-export function withCache<T extends (...args: any[]) => any>(
+export function withCache<T extends(...args: any[]) => any>(
   fn: T,
   keyGenerator?: (...args: Parameters<T>) => string,
   ttl?: number

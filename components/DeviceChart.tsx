@@ -28,12 +28,12 @@ export const DeviceChart: React.FC<DeviceChartProps> = ({ data }) => {
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Tooltip
-             cursor={{fill: 'transparent'}}
-             contentStyle={{
-                 backgroundColor: 'rgba(31, 41, 55, 0.8)',
-                 borderColor: '#4b5563',
-                 borderRadius: '0.5rem',
-             }}
+            cursor={{ fill: 'transparent' }}
+            contentStyle={{
+              backgroundColor: 'rgba(31, 41, 55, 0.8)',
+              borderColor: '#4b5563',
+              borderRadius: '0.5rem'
+            }}
           />
           <Legend
             iconType="circle"

@@ -24,7 +24,7 @@ export const InviteAcceptPage: React.FC = () => {
     }
   }, [token]);
 
-  const validateInvitation = async () => {
+  const validateInvitation = async() => {
     try {
       setLoading(true);
       const token = localStorage.getItem('jwt');
@@ -61,7 +61,7 @@ export const InviteAcceptPage: React.FC = () => {
     }
   };
 
-  const handleAcceptInvitation = async () => {
+  const handleAcceptInvitation = async() => {
     try {
       setAccepting(true);
       const token = localStorage.getItem('jwt');
@@ -100,19 +100,19 @@ export const InviteAcceptPage: React.FC = () => {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'owner': return 'オーナー';
-      case 'editor': return '編集者';
-      case 'viewer': return '閲覧者';
-      default: return role;
+    case 'owner': return 'オーナー';
+    case 'editor': return '編集者';
+    case 'viewer': return '閲覧者';
+    default: return role;
     }
   };
 
   const getRoleDescription = (role: string) => {
     switch (role) {
-      case 'owner': return 'プロジェクトの完全な管理権限を持ちます';
-      case 'editor': return 'プロジェクトの設定を編集できます';
-      case 'viewer': return 'アナリティクスデータを閲覧できます';
-      default: return '';
+    case 'owner': return 'プロジェクトの完全な管理権限を持ちます';
+    case 'editor': return 'プロジェクトの設定を編集できます';
+    case 'viewer': return 'アナリティクスデータを閲覧できます';
+    default: return '';
     }
   };
 

@@ -73,7 +73,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const value = {
     theme,
     setTheme,
-    isDark,
+    isDark
   };
 
   return (

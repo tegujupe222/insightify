@@ -49,7 +49,7 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
 
   useEffect(() => {
     let isMounted = true;
-    const loadInitialData = async () => {
+    const loadInitialData = async() => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/realtime/${projectId}`, {
           headers: {
@@ -125,8 +125,8 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
   return (
     <div className="space-y-6">
       {/* Connection Status */}
-      <div className={`flex items-center space-x-2 p-3 rounded-lg bg-green-100 text-green-800`}>
-        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+      <div className={'flex items-center space-x-2 p-3 rounded-lg bg-green-100 text-green-800'}>
+        <div className="w-2 h-2 rounded-full bg-green-500" />
         <span className="text-sm font-medium">Live</span>
       </div>
 
@@ -182,7 +182,7 @@ export const RealtimeDashboard: React.FC<RealtimeDashboardProps> = ({ projectId,
                 <div className="text-right">
                   <p className="text-xs text-gray-500">{formatTime(visitor.lastActivity)}</p>
                   <div className="flex items-center space-x-1 mt-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
                     <span className="text-xs text-green-600">Active</span>
                   </div>
                 </div>

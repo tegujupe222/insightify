@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 const ADMIN_EMAILS = [
@@ -81,7 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               { expiresIn: '7d' }
             );
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
       }

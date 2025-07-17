@@ -141,23 +141,23 @@ class AutomationManager {
       logger.info(`Starting automated task: ${task.name}`, { taskId: task.id });
 
       switch (task.id) {
-        case 'daily-backup':
-          await this.runDailyBackup();
-          break;
-        case 'cleanup-logs':
-          await this.runCleanupLogs();
-          break;
-        case 'reset-page-views':
-          await this.runResetPageViews();
-          break;
-        case 'cleanup-cache':
-          await this.runCleanupCache();
-          break;
-        case 'health-check':
-          await this.runHealthCheck();
-          break;
-        default:
-          throw new Error(`Unknown task: ${task.id}`);
+      case 'daily-backup':
+        await this.runDailyBackup();
+        break;
+      case 'cleanup-logs':
+        await this.runCleanupLogs();
+        break;
+      case 'reset-page-views':
+        await this.runResetPageViews();
+        break;
+      case 'cleanup-cache':
+        await this.runCleanupCache();
+        break;
+      case 'health-check':
+        await this.runHealthCheck();
+        break;
+      default:
+        throw new Error(`Unknown task: ${task.id}`);
       }
 
       task.status = 'completed';
@@ -328,7 +328,7 @@ class AutomationManager {
     enabledTasks: number;
     runningTasks: number;
     lastHealthCheck?: Date;
-  } {
+    } {
     const healthCheckTask = this.config.tasks.find(t => t.id === 'health-check');
     
     return {

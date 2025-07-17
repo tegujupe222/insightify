@@ -4,9 +4,7 @@ import { authenticateToken } from '../middleware/auth';
 import passport from 'passport';
 import { Strategy as GoogleStrategy, Profile, VerifyCallback } from 'passport-google-oauth20';
 import { UserModel } from '../models/User';
-import jwt from 'jsonwebtoken';
-import { Secret } from 'jsonwebtoken';
-import { SignOptions } from 'jsonwebtoken';
+import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 
 const router = Router();
 
@@ -21,8 +19,8 @@ passport.deserializeUser((user: any, done) => {
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID!,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  callbackURL: process.env.GOOGLE_CALLBACK_URL!,
-}, async (_accessToken: string, _refreshToken: string, profile: Profile, done: VerifyCallback) => {
+  callbackURL: process.env.GOOGLE_CALLBACK_URL!
+}, async(_accessToken: string, _refreshToken: string, profile: Profile, done: VerifyCallback) => {
   try {
     const email = profile.emails?.[0]?.value;
     if (!email) return done(new Error('No email found'), false);
@@ -40,7 +38,7 @@ passport.use(new GoogleStrategy({
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 // Google認証コールバック
-router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/' }), async (req, res) => {
+router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/' }), async(req, res) => {
   const user = req.user as any;
   const secret: Secret = process.env.JWT_SECRET!;
   const signOptions: SignOptions = { expiresIn: process.env.JWT_EXPIRES_IN || '7d' };

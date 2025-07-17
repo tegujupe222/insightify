@@ -44,7 +44,7 @@ export const NotificationManagementTable: React.FC = () => {
     fetchStats();
   }, []);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async() => {
     try {
       const response = await fetch('/api/notifications?limit=100');
       const data = await response.json();
@@ -61,7 +61,7 @@ export const NotificationManagementTable: React.FC = () => {
     }
   };
 
-  const fetchStats = async () => {
+  const fetchStats = async() => {
     try {
       const response = await fetch('/api/notifications/stats');
       const data = await response.json();
@@ -74,7 +74,7 @@ export const NotificationManagementTable: React.FC = () => {
     }
   };
 
-  const handleRetryFailures = async () => {
+  const handleRetryFailures = async() => {
     if (window.confirm('失敗したメールを再送しますか？')) {
       try {
         const response = await fetch('/api/notifications/retry-failures', {
@@ -96,7 +96,7 @@ export const NotificationManagementTable: React.FC = () => {
     }
   };
 
-  const handleSendTestEmail = async () => {
+  const handleSendTestEmail = async() => {
     if (!testEmailData.email || !testEmailData.subject || !testEmailData.content) {
       alert('すべてのフィールドを入力してください');
       return;
@@ -123,7 +123,7 @@ export const NotificationManagementTable: React.FC = () => {
     }
   };
 
-  const handleDeleteOld = async () => {
+  const handleDeleteOld = async() => {
     const days = prompt('何日前の通知を削除しますか？（デフォルト: 90日）', '90');
     if (days) {
       try {
@@ -154,31 +154,31 @@ export const NotificationManagementTable: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'sent':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">送信済み</span>;
-      case 'failed':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">失敗</span>;
-      case 'pending':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">待機中</span>;
-      default:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">不明</span>;
+    case 'sent':
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">送信済み</span>;
+    case 'failed':
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">失敗</span>;
+    case 'pending':
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">待機中</span>;
+    default:
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">不明</span>;
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'upgrade_recommended':
-        return 'アップグレード推奨';
-      case 'subscription_requested':
-        return 'サブスクリプション申し込み';
-      case 'subscription_activated':
-        return 'サブスクリプション有効化';
-      case 'payment_confirmed':
-        return '支払い確認';
-      case 'limit_warning':
-        return '制限警告';
-      default:
-        return type;
+    case 'upgrade_recommended':
+      return 'アップグレード推奨';
+    case 'subscription_requested':
+      return 'サブスクリプション申し込み';
+    case 'subscription_activated':
+      return 'サブスクリプション有効化';
+    case 'payment_confirmed':
+      return '支払い確認';
+    case 'limit_warning':
+      return '制限警告';
+    default:
+      return type;
     }
   };
 

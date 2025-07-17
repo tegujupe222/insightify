@@ -157,7 +157,7 @@ export class SubscriptionController {
       
       // Get user details for each subscription
       const subscriptionsWithUsers = await Promise.all(
-        subscriptions.map(async (sub) => {
+        subscriptions.map(async(sub) => {
           const user = await UserModel.findById(sub.userId);
           return {
             ...sub,

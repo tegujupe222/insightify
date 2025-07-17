@@ -39,7 +39,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
   const [subscriptionLoading, setSubscriptionLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async() => {
       if (!project?.id) {
         setLoading(false);
         return;
@@ -73,7 +73,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
           throw new Error(result.error || 'アナリティクスデータの取得に失敗しました');
         }
       } catch (error) {
-        console.error("Failed to fetch analytics data:", error);
+        console.error('Failed to fetch analytics data:', error);
         showToast({
           type: 'error',
           title: 'エラー',
@@ -86,12 +86,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
           kpis: {
             pageViews: { value: '0', change: '0%' },
             uniqueUsers: { value: '0', change: '0%' },
-            bounceRate: { value: '0%', change: '0%' },
+            bounceRate: { value: '0%', change: '0%' }
           },
           liveVisitors: 0,
           visitorData: [],
           sources: [],
-          deviceData: [],
+          deviceData: []
         });
       } finally {
         setLoading(false);
@@ -103,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
 
   // サブスクリプション情報取得
   useEffect(() => {
-    const fetchSubscription = async () => {
+    const fetchSubscription = async() => {
       setSubscriptionLoading(true);
       try {
         const token = localStorage.getItem('jwt');
@@ -142,7 +142,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
   }, [user]);
 
   // サブスクリプションアップグレード
-  const handleUpgrade = async (planType: 'monthly' | 'yearly') => {
+  const handleUpgrade = async(planType: 'monthly' | 'yearly') => {
     try {
       const token = localStorage.getItem('jwt');
       if (!token) throw new Error('認証トークンが見つかりません');
@@ -217,22 +217,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
         user={user}
       />
       <main className="pt-16 md:pt-16 md:ml-64 p-4 sm:p-6 lg:p-8 max-w-screen-2xl mx-auto">
-         <div className="mb-6">
-            <button onClick={onBackToProjects} className={`flex items-center text-sm font-medium transition-colors duration-150 ${
-              isDark ? 'text-gray-400 hover:text-indigo-400' : 'text-gray-600 hover:text-indigo-600'
+        <div className="mb-6">
+          <button onClick={onBackToProjects} className={`flex items-center text-sm font-medium transition-colors duration-150 ${
+            isDark ? 'text-gray-400 hover:text-indigo-400' : 'text-gray-600 hover:text-indigo-600'
+          }`}>
+            <Icon name="arrowLeft" className="h-4 w-4 mr-2" />
+            {t('common.back')} {t('navigation.projects')}
+          </button>
+          <h1 className={`text-3xl font-bold mt-2 truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{project?.name || 'Dashboard'}</h1>
+          {project?.url && (
+            <a href={project.url} target="_blank" rel="noopener noreferrer" className={`flex items-center mt-1 text-sm transition-colors duration-150 ${
+              isDark ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-500'
             }`}>
-                <Icon name="arrowLeft" className="h-4 w-4 mr-2" />
-                {t('common.back')} {t('navigation.projects')}
-            </button>
-            <h1 className={`text-3xl font-bold mt-2 truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{project?.name || 'Dashboard'}</h1>
-            {project?.url && (
-              <a href={project.url} target="_blank" rel="noopener noreferrer" className={`flex items-center mt-1 text-sm transition-colors duration-150 ${
-                isDark ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-500'
-              }`}>
-                  <Icon name="globe" className="h-4 w-4 mr-1.5" />
-                  {project.url}
-              </a>
-            )}
+              <Icon name="globe" className="h-4 w-4 mr-1.5" />
+              {project.url}
+            </a>
+          )}
         </div>
 
         {/* Subscription Status */}
@@ -271,25 +271,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
             <div className={`lg:col-span-2 p-6 rounded-xl shadow-lg border ${
               isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
             }`}>
-               <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                 {t('dashboard.visitorChart')}
-               </h2>
+              <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('dashboard.visitorChart')}
+              </h2>
               <VisitorsChart data={data.visitorData} />
             </div>
             <div className={`p-6 rounded-xl shadow-lg border ${
               isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
             }`}>
-               <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                 {t('dashboard.trafficSources')}
-               </h2>
+              <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('dashboard.trafficSources')}
+              </h2>
               <SourceTable data={data.sources} />
             </div>
             <div className={`lg:col-span-3 p-6 rounded-xl shadow-lg border ${
               isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
             }`}>
-               <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                 {t('dashboard.deviceBreakdown')}
-               </h2>
+              <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('dashboard.deviceBreakdown')}
+              </h2>
               <DeviceChart data={data.deviceData} />
             </div>
           </div>

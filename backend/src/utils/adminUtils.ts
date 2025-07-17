@@ -32,11 +32,11 @@ export const generateInvoiceNumber = (): string => {
 
 export const calculatePageViewsLimit = (subscriptionStatus: string): number => {
   switch (subscriptionStatus) {
-    case 'premium':
-      return Infinity; // Unlimited for premium users
-    case 'free':
-    default:
-      return 3000; // 3000 PV limit for free users
+  case 'premium':
+    return Infinity; // Unlimited for premium users
+  case 'free':
+  default:
+    return 3000; // 3000 PV limit for free users
   }
 };
 

@@ -45,7 +45,7 @@ export const HeatmapPageManager: React.FC<HeatmapPageManagerProps> = ({
     fetchStats();
   }, [projectId]);
 
-  const fetchPages = async () => {
+  const fetchPages = async() => {
     try {
       const response = await fetch(`/api/heatmap/projects/${projectId}/pages`);
       const data = await response.json();
@@ -62,7 +62,7 @@ export const HeatmapPageManager: React.FC<HeatmapPageManagerProps> = ({
     }
   };
 
-  const fetchStats = async () => {
+  const fetchStats = async() => {
     try {
       const response = await fetch(`/api/heatmap/projects/${projectId}/stats`);
       const data = await response.json();
@@ -85,16 +85,16 @@ export const HeatmapPageManager: React.FC<HeatmapPageManagerProps> = ({
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case 'activity':
-          return new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime();
-        case 'clicks':
-          return b.totalClicks - a.totalClicks;
-        case 'scrolls':
-          return b.totalScrolls - a.totalScrolls;
-        case 'moves':
-          return b.totalMoves - a.totalMoves;
-        default:
-          return 0;
+      case 'activity':
+        return new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime();
+      case 'clicks':
+        return b.totalClicks - a.totalClicks;
+      case 'scrolls':
+        return b.totalScrolls - a.totalScrolls;
+      case 'moves':
+        return b.totalMoves - a.totalMoves;
+      default:
+        return 0;
       }
     });
 
@@ -116,10 +116,10 @@ export const HeatmapPageManager: React.FC<HeatmapPageManagerProps> = ({
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4" />
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded" />
             ))}
           </div>
         </div>

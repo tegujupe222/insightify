@@ -59,11 +59,11 @@ export const UserManagementTable: React.FC<UserManagementTableProps> = ({ users,
                   </td>
                   <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
                     <button
-                        onClick={() => onDeleteUser(user.id)}
-                        className="text-red-500 hover:text-red-400 p-1 rounded-md hover:bg-gray-700 transition-colors"
-                        aria-label={`Delete user ${user.name || user.email}`}
+                      onClick={() => onDeleteUser(user.id)}
+                      className="text-red-500 hover:text-red-400 p-1 rounded-md hover:bg-gray-700 transition-colors"
+                      aria-label={`Delete user ${user.name || user.email}`}
                     >
-                        <Icon name="trash" className="h-5 w-5" />
+                      <Icon name="trash" className="h-5 w-5" />
                     </button>
                   </td>
                 </tr>
