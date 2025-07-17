@@ -1,8 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
 import { randomUUID } from 'crypto';
-
-const jwt = require('jsonwebtoken');
+import { verify } from 'jsonwebtoken';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -26,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+  const decoded = verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
   
   // JWTからユーザーIDを取得（userIdまたはidのいずれかを使用）
   const userId = decoded.userId || decoded.id;
