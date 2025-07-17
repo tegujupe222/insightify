@@ -1,11 +1,46 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
-import { sendEmail } from './emailService';
+import sgMail from '@sendgrid/mail';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
+
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@insightify.com';
+const FROM_NAME = process.env.FROM_NAME || 'Insightify Team';
+
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+}
+
+async function sendEmail(to: string, subject: string, content: string, htmlContent?: string): Promise<boolean> {
+  try {
+    if (!SENDGRID_API_KEY) {
+      console.warn('SendGrid API key not configured, skipping email send');
+      return false;
+    }
+
+    const msg = {
+      to,
+      from: {
+        email: FROM_EMAIL,
+        name: FROM_NAME
+      },
+      subject,
+      text: content,
+      html: htmlContent || `<pre>${content}</pre>`
+    };
+
+    await sgMail.send(msg);
+    console.log(`✅ Email sent successfully to ${to}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send email:', error);
+    return false;
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
