@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
-import sgMail from '@sendgrid/mail';
+import * as sgMail from '@sendgrid/mail';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
-import jwt from 'jsonwebtoken';
-import sgMail from '@sendgrid/mail';
+import * as jwt from 'jsonwebtoken';
+import * as sgMail from '@sendgrid/mail';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
