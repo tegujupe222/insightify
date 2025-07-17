@@ -34,6 +34,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const client = await pool.connect();
     
     try {
+      // project_invitationsテーブルが存在しない場合は作成
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS project_invitations (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+          inviter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          invitee_email VARCHAR(255) NOT NULL,
+          role VARCHAR(20) NOT NULL CHECK (role IN ('owner', 'editor', 'viewer')),
+          message TEXT,
+          status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'expired')),
+          token VARCHAR(255) UNIQUE NOT NULL,
+          expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+      `);
+
+      // project_membersテーブルが存在しない場合は作成
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS project_members (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          role VARCHAR(20) NOT NULL CHECK (role IN ('owner', 'editor', 'viewer')),
+          invited_by UUID REFERENCES users(id) ON DELETE SET NULL,
+          joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          UNIQUE(project_id, user_id)
+        )
+      `);
+
       // 招待を検索
       const invitationResult = await client.query(
         `SELECT i.*, p.name as project_name, p.url as project_url, u.email as inviter_email

@@ -26,6 +26,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const client = await pool.connect();
   
   try {
+    // project_membersテーブルが存在しない場合は作成
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS project_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(20) NOT NULL CHECK (role IN ('owner', 'editor', 'viewer')),
+        invited_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(project_id, user_id)
+      )
+    `);
+
     // プロジェクトの存在確認と権限チェック
     const projectResult = await client.query(
       'SELECT id, name, user_id FROM projects WHERE id = $1',
@@ -201,12 +215,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // 更新対象のメンバーを確認
-        const updateTargetResult = await client.query(
+        const updateTargetMemberResult = await client.query(
           'SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2',
           [projectId, updateMemberId]
         );
 
-        if (updateTargetResult.rows.length === 0) {
+        if (updateTargetMemberResult.rows.length === 0) {
           return res.status(404).json({ success: false, error: 'Member not found' });
         }
 
@@ -227,7 +241,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
   } catch (error) {
-    console.error('Project members error:', error);
+    console.error('Project members API error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
