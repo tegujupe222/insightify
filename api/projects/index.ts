@@ -1,8 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
 import { randomUUID } from 'crypto';
-
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -31,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // JWT検証を同期的に実行
-    let decoded;
+    let decoded: any;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
     } catch {
