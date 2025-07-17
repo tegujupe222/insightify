@@ -1,5 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { EmailNotificationModel } from './emailNotificationModel';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS設定
@@ -15,12 +20,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const client = await pool.connect();
+  
   try {
     const { limit = '50', type, status } = req.query;
     const limitNum = parseInt(limit as string) || 50;
 
     // DBから通知履歴を取得
-    let notifications: any[] = await EmailNotificationModel.findAll(limitNum, 0);
+    const notificationsResult = await client.query(
+      `SELECT * FROM email_notifications
+       ORDER BY sent_at DESC
+       LIMIT $1`,
+      [limitNum]
+    );
+
+    let notifications = notificationsResult.rows;
 
     // フィルタリング（snake_caseでアクセス）
     if (type && type !== 'all') {
@@ -52,5 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('Notifications error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 } 
