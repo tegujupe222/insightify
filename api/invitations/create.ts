@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
-import jwt from 'jsonwebtoken';
+const jwt = require('jsonwebtoken');
 import * as sgMail from '@sendgrid/mail';
 
 const pool = new Pool({
