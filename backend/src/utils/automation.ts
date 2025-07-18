@@ -47,7 +47,7 @@ class AutomationManager {
           id: 'reset-page-views',
           name: 'Reset Monthly Page Views',
           schedule: '0 0 1 * *', // 毎月1日午前0時
-          enabled: true,
+          enabled: false, // 開発中は無効化
           status: 'idle'
         },
         {
@@ -122,9 +122,13 @@ class AutomationManager {
     if (minute === '0' && hour === '*/6') return 6 * 60 * 60 * 1000; // 6時間
     if (minute === '0' && hour === '2') return 24 * 60 * 60 * 1000; // 毎日午前2時
     if (minute === '0' && hour === '3') return 24 * 60 * 60 * 1000; // 毎日午前3時
-    if (minute === '0' && hour === '0' && day === '1') return 30 * 24 * 60 * 60 * 1000; // 毎月1日
+    if (minute === '0' && hour === '0' && day === '1') {
+      // 月次タスクは開発中は無効化、本番では手動実行
+      return null; // 月次タスクは無効化
+    }
     
-    return null;
+    // デフォルト: 1時間ごと
+    return 60 * 60 * 1000;
   }
 
   private async runTask(task: AutomationTask): Promise<void> {

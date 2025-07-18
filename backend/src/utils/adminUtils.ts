@@ -33,7 +33,7 @@ export const generateInvoiceNumber = (): string => {
 export const calculatePageViewsLimit = (subscriptionStatus: string): number => {
   switch (subscriptionStatus) {
   case 'premium':
-    return Infinity; // Unlimited for premium users
+    return 999999999; // Very high limit for premium users (effectively unlimited)
   case 'free':
   default:
     return 3000; // 3000 PV limit for free users

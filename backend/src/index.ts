@@ -16,7 +16,7 @@ import {
   errorHandler
 } from './middleware/security';
 import { setupPassport } from './config/passport';
-import { connectDatabase } from './utils/database';
+import { connectDatabase, initializeDatabase, createDefaultAdmin } from './utils/database';
 import { logger } from './utils/logger';
 import { automationManager } from './utils/automation';
 import { cacheManager } from './utils/cache';
@@ -154,6 +154,14 @@ async function startServer() {
   try {
     await connectDatabase();
     console.log('✅ Database connected successfully');
+    
+    // Initialize database tables
+    await initializeDatabase();
+    console.log('✅ Database tables initialized');
+    
+    // Create default admin users
+    await createDefaultAdmin();
+    console.log('✅ Default admin users created');
     
     // Passport設定
     setupPassport();
