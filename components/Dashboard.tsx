@@ -252,13 +252,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
           <StatCard title="Bounce Rate" value={data.kpis.bounceRate.value} change={data.kpis.bounceRate.change} iconName="trendingDown" changeColor="text-red-400" />
         </div>
 
-        {/* Real-time Dashboard */}
-        <div className="mb-6">
-          <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {t('realtime.title')} {t('analytics.title')}
-          </h2>
-          <RealtimeDashboard projectId={project?.id || 'default'} token={user.token || ''} />
-        </div>
+
 
         {/* Heatmap Analysis */}
         {currentPage === 'heatmap' && (
@@ -266,6 +260,106 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, project, onBackToProjec
             <HeatmapPage projectId={project?.id || 'default'} />
           </div>
         )}
+        
+        {/* Analytics Page */}
+        {currentPage === 'analytics' && (
+          <div className="mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className={`lg:col-span-2 p-6 rounded-xl shadow-lg border ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              }`}>
+                <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t('analytics.title')} - {t('analytics.overview')}
+                </h2>
+                <VisitorsChart data={data.visitorData} />
+              </div>
+              <div className={`p-6 rounded-xl shadow-lg border ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              }`}>
+                <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t('analytics.trafficSources')}
+                </h2>
+                <SourceTable data={data.sources} />
+              </div>
+              <div className={`lg:col-span-3 p-6 rounded-xl shadow-lg border ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              }`}>
+                <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t('analytics.deviceBreakdown')}
+                </h2>
+                <DeviceChart data={data.deviceData} />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Real-time Page */}
+        {currentPage === 'realtime' && (
+          <div className="mb-6">
+            <RealtimeDashboard projectId={project?.id || 'default'} token={user.token || ''} />
+          </div>
+        )}
+        
+        {/* Reports Page */}
+        {currentPage === 'reports' && (
+          <div className="mb-6">
+            <div className={`p-6 rounded-xl shadow-lg border ${
+              isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+            }`}>
+              <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('navigation.reports')}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className={`p-4 rounded-lg border ${
+                  isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <h3 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {t('analytics.pageViews')}
+                  </h3>
+                  <p className={`text-2xl font-bold ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                    {data.kpis.pageViews.value}
+                  </p>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {data.kpis.pageViews.change}
+                  </p>
+                </div>
+                <div className={`p-4 rounded-lg border ${
+                  isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <h3 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {t('analytics.uniqueVisitors')}
+                  </h3>
+                  <p className={`text-2xl font-bold ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                    {data.kpis.uniqueUsers.value}
+                  </p>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {data.kpis.uniqueUsers.change}
+                  </p>
+                </div>
+                <div className={`p-4 rounded-lg border ${
+                  isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <h3 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {t('analytics.bounceRate')}
+                  </h3>
+                  <p className={`text-2xl font-bold ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                    {data.kpis.bounceRate.value}
+                  </p>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {data.kpis.bounceRate.change}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6">
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t('analytics.topPages')}
+                </h3>
+                <SourceTable data={data.sources} />
+              </div>
+            </div>
+          </div>
+        )}
+        
         {currentPage === 'dashboard' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className={`lg:col-span-2 p-6 rounded-xl shadow-lg border ${
