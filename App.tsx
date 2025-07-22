@@ -81,7 +81,7 @@ const AppContent: React.FC<{ user: AuthUser | null; onLogout: () => void; loadin
     }
   };
 
-  const handleAddProject = async(name: string, url: string) => {
+  const handleAddProject = async(name: string, url: string, domains: string[] = []) => {
     try {
       const token = localStorage.getItem('jwt');
       if (!token) {
@@ -94,7 +94,7 @@ const AppContent: React.FC<{ user: AuthUser | null; onLogout: () => void; loadin
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name, url })
+        body: JSON.stringify({ name, url, domains })
       });
 
       if (!response.ok) {
@@ -110,12 +110,9 @@ const AppContent: React.FC<{ user: AuthUser | null; onLogout: () => void; loadin
           duration: 3000
         });
         setShowAddProjectModal(false);
-        
-        // 新しく作成されたプロジェクトを保存
         setNewlyCreatedProject(data.data.project);
         setShowTrackingCodeModal(true);
-        
-        fetchProjects(); // プロジェクト一覧を再取得
+        fetchProjects();
       } else {
         throw new Error(data.error || 'プロジェクトの作成に失敗しました');
       }
