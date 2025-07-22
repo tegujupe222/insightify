@@ -1,9 +1,9 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { Pool } from 'pg';
+import { VercelRequest, VercelResponse } from '@vercel/node;
+import { Pool } frompg';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -19,8 +19,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       SELECT 
         COUNT(*) as total,
         COUNT(CASE WHEN status = 'sent' THEN 1 END) as sent,
-        COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed,
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending
+        COUNT(CASE WHEN status = 'failed' THEN 1) as failed,
+        COUNT(CASE WHEN status = 'pending' THEN 1) as pending
       FROM email_notifications
     `;
     const overallResult = await client.query(overallQuery);
@@ -62,4 +62,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } finally {
     client.release();
   }
-}
+} 

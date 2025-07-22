@@ -7,7 +7,7 @@ import { UserModel } from '../models/User';
 const router = Router();
 
 // 銀行振込リクエスト
-router.post('/bank-transfer', authenticateToken, async (req, res) => {
+router.post('/bank-transfer', authenticateToken, async(req, res) => {
   try {
     const { planType, amount } = req.body;
     const userId = (req as any).user.id;
@@ -37,7 +37,7 @@ router.post('/bank-transfer', authenticateToken, async (req, res) => {
 });
 
 // サブスクリプション作成
-router.post('/subscription', authenticateToken, async (req, res) => {
+router.post('/subscription', authenticateToken, async(req, res) => {
   try {
     const { planType, amount } = req.body;
     const userId = (req as any).user.id;
@@ -70,7 +70,7 @@ router.post('/subscription', authenticateToken, async (req, res) => {
 });
 
 // 請求書生成
-router.post('/invoice', authenticateToken, async (req, res) => {
+router.post('/invoice', authenticateToken, async(req, res) => {
   try {
     const { subscriptionId } = req.body;
     const userId = (req as any).user.id;

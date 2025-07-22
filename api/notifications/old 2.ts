@@ -1,9 +1,9 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { Pool } from 'pg';
+import { VercelRequest, VercelResponse } from '@vercel/node;
+import { Pool } frompg';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -14,11 +14,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const client = await pool.connect();
   
   try {
-    const { days = '90' } = req.query;
-    const daysNum = parseInt(days as string) || 90;
+    const { days = 90} = req.query;
+    const daysNum = parseInt(days as string) || 90  
     const query = `
       DELETE FROM email_notifications
-      WHERE sent_at < NOW() - INTERVAL '${daysNum} days'
+      WHERE sent_at < NOW() - INTERVAL ${daysNum} days
     `;
     const result = await client.query(query);
     const deletedCount = result.rowCount || 0;
@@ -38,4 +38,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } finally {
     client.release();
   }
-}
+} 

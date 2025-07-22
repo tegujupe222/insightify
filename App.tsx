@@ -46,7 +46,7 @@ const AppContent: React.FC<{ user: AuthUser | null; onLogout: () => void; loadin
     }
   }, [user]);
 
-  const fetchProjects = async () => {
+  const fetchProjects = async() => {
     try {
       const token = localStorage.getItem('jwt');
       if (!token) {
@@ -81,7 +81,7 @@ const AppContent: React.FC<{ user: AuthUser | null; onLogout: () => void; loadin
     }
   };
 
-  const handleAddProject = async (name: string, url: string) => {
+  const handleAddProject = async(name: string, url: string) => {
     try {
       const token = localStorage.getItem('jwt');
       if (!token) {
@@ -130,7 +130,7 @@ const AppContent: React.FC<{ user: AuthUser | null; onLogout: () => void; loadin
     }
   };
 
-  const handleDeleteProject = async (projectId: string) => {
+  const handleDeleteProject = async(projectId: string) => {
     try {
       const token = localStorage.getItem('jwt');
       if (!token) {
@@ -296,10 +296,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     checkAuthStatus();
-    // eslint-disable-next-line
+     
   }, []);
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = async() => {
     try {
       setLoading(true);
       setError(null);
@@ -363,7 +363,7 @@ const App: React.FC = () => {
           localStorage.removeItem('jwt');
         }
       }
-    } catch (err) {
+    } catch {
       setError('認証の確認に失敗しました');
     } finally {
       setLoading(false);

@@ -35,7 +35,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     }
   }, [project]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
     if (!project) return;
 
@@ -67,7 +67,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async() => {
     if (!project) return;
     
     if (!window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {

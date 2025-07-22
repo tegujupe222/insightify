@@ -18,19 +18,19 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-             <div className="text-right">
-                <p className="text-sm font-medium text-white">{user.email}</p>
-                <p className={`text-xs font-semibold ${user.role === 'admin' ? 'text-amber-400' : 'text-sky-400'}`}>{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</p>
+            <div className="text-right">
+              <p className="text-sm font-medium text-white">{user.email}</p>
+              <p className={`text-xs font-semibold ${user.role === 'admin' ? 'text-amber-400' : 'text-sky-400'}`}>{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</p>
             </div>
             {user.role === 'admin' && (
-                <span className="text-amber-400" title="Administrator">
-                    {/* 管理者アイコンはそのまま */}
-                </span>
+              <span className="text-amber-400" title="Administrator">
+                {/* 管理者アイコンはそのまま */}
+              </span>
             )}
             <button
-                onClick={onLogout}
-                className="p-2 text-gray-400 rounded-full hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
-                aria-label="Logout"
+              onClick={onLogout}
+              className="p-2 text-gray-400 rounded-full hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+              aria-label="Logout"
             >
               {/* ログアウトアイコンはそのまま */}
             </button>

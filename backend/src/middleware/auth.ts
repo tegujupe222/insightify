@@ -15,7 +15,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', async (err: any, decoded: any) => {
+  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', async(err: any, decoded: any) => {
     if (err) {
       res.status(403).json({
         success: false,

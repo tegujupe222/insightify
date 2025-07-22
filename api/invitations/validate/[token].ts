@@ -1,10 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -29,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const jwtToken = authHeader.replace('Bearer ', '');
-    jwt.verify(jwtToken, process.env.JWT_SECRET || 'fallback-secret', async (err: any, decoded: any) => {
+    jwt.verify(jwtToken, process.env.JWT_SECRET || 'fallback-secret', async(err: any, decoded: any) => {
       if (err) {
         return res.status(403).json({ success: false, error: 'Invalid or expired token' });
       }

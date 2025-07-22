@@ -1,11 +1,11 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
-const jwt = require('jsonwebtoken');
-import * as sgMail from '@sendgrid/mail';
+import jwt from 'jsonwebtoken';
+import sgMail from '@sendgrid/mail';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 // Initialize SendGrid
@@ -46,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret', async (err: any, decoded: any) => {
+    jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret', async(err: any, decoded: any) => {
       if (err) {
         return res.status(403).json({ success: false, error: 'Invalid or expired token' });
       }

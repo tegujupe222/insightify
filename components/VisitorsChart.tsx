@@ -29,7 +29,7 @@ export const VisitorsChart: React.FC<VisitorsChartProps> = ({ data }) => {
             top: 5,
             right: 20,
             left: -10,
-            bottom: 5,
+            bottom: 5
           }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
