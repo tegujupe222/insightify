@@ -177,6 +177,18 @@ vercel --prod
 
 ### アナリティクス
 - `POST /api/analytics/pageview` - ページビュー記録
+- `GET /api/analytics/:projectId` - アナリティクスデータ取得
+- `GET /api/realtime/:projectId` - リアルタイムデータ取得
+- `GET /api/heatmap/projects/:projectId/pages` - ヒートマップページ一覧
+
+### テスト
+```bash
+# アナリティクステストデータの挿入
+npm run test:analytics insert <project-id>
+
+# アナリティクステストデータの削除
+npm run test:analytics cleanup <project-id>
+```
 - `POST /api/analytics/event` - イベント記録
 - `GET /api/analytics/summary` - サマリー取得
 - `GET /api/analytics/visitors` - ビジター分析

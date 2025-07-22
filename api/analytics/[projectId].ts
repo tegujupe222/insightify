@@ -156,7 +156,7 @@ const getAnalyticsData = async(projectId: string): Promise<AnalyticsData> => {
     const sources: Source[] = sourcesResult.rows.map(row => ({
       name: row.referrer || 'Direct',
       visitors: parseInt(row.visitors),
-      change: '+0%' // 実際の実装では前日比を計算
+      change: '+0%' // ソース別の変化率は後で実装
     }));
 
     // デバイス別データを取得
@@ -174,11 +174,51 @@ const getAnalyticsData = async(projectId: string): Promise<AnalyticsData> => {
       value: totalSessions > 0 ? Math.round((parseInt(row.count) / totalSessions) * 100) : 0
     }));
 
+    // 前日比を計算するためのクエリ
+    const yesterdayResult = await client.query(
+      `SELECT 
+         COUNT(*) as total_page_views,
+         COUNT(DISTINCT session_id) as unique_users
+       FROM page_views
+       WHERE project_id = $1 AND timestamp >= NOW() - INTERVAL '2 days' AND timestamp < NOW() - INTERVAL '1 day'`,
+      [projectId]
+    );
+
+    const yesterdayData = yesterdayResult.rows[0];
+    const yesterdayPageViews = parseInt(yesterdayData.total_page_views) || 0;
+    const yesterdayUniqueUsers = parseInt(yesterdayData.unique_users) || 0;
+
+    // 変化率を計算
+    const pageViewsChange = yesterdayPageViews > 0 
+      ? `${totalPageViews > yesterdayPageViews ? '+' : ''}${Math.round(((totalPageViews - yesterdayPageViews) / yesterdayPageViews) * 100)}%`
+      : '+0%';
+    
+    const uniqueUsersChange = yesterdayUniqueUsers > 0
+      ? `${uniqueUsers > yesterdayUniqueUsers ? '+' : ''}${Math.round(((uniqueUsers - yesterdayUniqueUsers) / yesterdayUniqueUsers) * 100)}%`
+      : '+0%';
+
+    // 直帰率を計算（セッション数が1のビジターの割合）
+    const bounceRateResult = await client.query(
+      `SELECT COUNT(DISTINCT session_id) as bounce_sessions
+       FROM page_views
+       WHERE project_id = $1 AND session_id IN (
+         SELECT session_id 
+         FROM page_views 
+         WHERE project_id = $1 
+         GROUP BY session_id 
+         HAVING COUNT(*) = 1
+       )`,
+      [projectId]
+    );
+
+    const bounceSessions = parseInt(bounceRateResult.rows[0]?.bounce_sessions) || 0;
+    const bounceRate = uniqueUsers > 0 ? Math.round((bounceSessions / uniqueUsers) * 100) : 0;
+
     return {
       kpis: {
-        pageViews: { value: totalPageViews.toLocaleString(), change: '+0%' },
-        uniqueUsers: { value: uniqueUsers.toLocaleString(), change: '+0%' },
-        bounceRate: { value: '0%', change: '0%' } // 実際の実装では計算
+        pageViews: { value: totalPageViews.toLocaleString(), change: pageViewsChange },
+        uniqueUsers: { value: uniqueUsers.toLocaleString(), change: uniqueUsersChange },
+        bounceRate: { value: `${bounceRate}%`, change: '0%' } // 直帰率の変化率は後で実装
       },
       liveVisitors,
       visitorData,
