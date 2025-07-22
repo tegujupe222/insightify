@@ -218,11 +218,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
 
       const result = await response.json();
       if (result.success) {
-        // createdAtをDate型に変換して追加
+        // result.data.project を正しく参照
+        const project = result.data.project;
         const newProject = {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt)
+          ...project,
+          createdAt: new Date(project.createdAt),
+          updatedAt: new Date(project.updatedAt)
         };
         setProjects(prevProjects => [...prevProjects, newProject]);
         setShowAddProjectModal(false);
