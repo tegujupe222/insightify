@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 interface AuthUser {
@@ -68,7 +68,7 @@ const authenticateToken = (req: Request): AuthUser | null => {
 };
 
 // データベースからアナリティクスデータを取得する関数
-const getAnalyticsData = async(projectId: string): Promise<AnalyticsData> => {
+const getAnalyticsData = async (projectId: string): Promise<AnalyticsData> => {
   const client = await pool.connect();
   try {
     // プロジェクトの存在と権限チェック
@@ -144,12 +144,12 @@ const getAnalyticsData = async(projectId: string): Promise<AnalyticsData> => {
       kpis: {
         pageViews: { value: totalPageViews.toLocaleString(), change: '+0%' },
         uniqueUsers: { value: uniqueUsers.toLocaleString(), change: '+0%' },
-        bounceRate: { value: '0%', change: '0%' } // 実際の実装では計算
+        bounceRate: { value: '0%', change: '0%' }, // 実際の実装では計算
       },
       liveVisitors,
       visitorData,
       sources,
-      deviceData
+      deviceData,
     };
   } finally {
     client.release();

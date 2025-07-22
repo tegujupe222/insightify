@@ -12,7 +12,7 @@ const dbConfig: PoolConfig = {
   application_name: 'insightify-analytics',
   // Connection pooling for serverless
   max: process.env.NODE_ENV === 'production' ? 1 : 20, // Vercel recommends 1 for serverless
-  idleTimeoutMillis: process.env.NODE_ENV === 'production' ? 1000 : 30000
+  idleTimeoutMillis: process.env.NODE_ENV === 'production' ? 1000 : 30000,
 };
 
 const pool = new Pool(dbConfig);

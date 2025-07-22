@@ -1,10 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
-import sgMail from '@sendgrid/mail';
+import * as sgMail from '@sendgrid/mail';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   
   try {
     // 失敗した通知を取得
-    const failedQuery = 'SELECT * FROM email_notifications WHERE status = \'failed\'';
+    const failedQuery = `SELECT * FROM email_notifications WHERE status = 'failed'`;
     const failedResult = await client.query(failedQuery);
     let success = 0;
     let failed = 0;
@@ -60,10 +60,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const sent = await sendEmail(n.user_email, n.subject, n.content);
       if (sent) {
         success++;
-        await client.query('UPDATE email_notifications SET status = \'sent\', error_message = NULL, sent_at = NOW() WHERE id = $1', [n.id]);
+        await client.query(`UPDATE email_notifications SET status = 'sent', error_message = NULL, sent_at = NOW() WHERE id = $1`, [n.id]);
       } else {
         failed++;
-        await client.query('UPDATE email_notifications SET error_message = $1 WHERE id = $2', ['Retry failed', n.id]);
+        await client.query(`UPDATE email_notifications SET error_message = $1 WHERE id = $2`, ['Retry failed', n.id]);
       }
     }
     

@@ -16,7 +16,7 @@ import {
   errorHandler
 } from './middleware/security';
 import { setupPassport } from './config/passport';
-import { connectDatabase, initializeDatabase, createDefaultAdmin } from './utils/database';
+import { connectDatabase } from './utils/database';
 import { logger } from './utils/logger';
 import { automationManager } from './utils/automation';
 import { cacheManager } from './utils/cache';
@@ -87,7 +87,7 @@ app.use('/api/analytics/track', trackingLimiter); // トラッキングは緩い
 app.use('/api', apiLimiter); // その他のAPIは一般的な制限
 
 // ヘルスチェック
-app.get('/health', async(_req, res) => {
+app.get('/health', async (_req, res) => {
   try {
     const startTime = Date.now();
     
@@ -155,14 +155,6 @@ async function startServer() {
     await connectDatabase();
     console.log('✅ Database connected successfully');
     
-    // Initialize database tables
-    await initializeDatabase();
-    console.log('✅ Database tables initialized');
-    
-    // Create default admin users
-    await createDefaultAdmin();
-    console.log('✅ Default admin users created');
-    
     // Passport設定
     setupPassport();
     console.log('✅ Passport configured');
@@ -173,10 +165,10 @@ async function startServer() {
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log('🔒 Security features enabled');
-      console.log('📝 Logging system active');
-      console.log('💾 Cache system active');
-      console.log('🤖 Automation system active');
+      console.log(`🔒 Security features enabled`);
+      console.log(`📝 Logging system active`);
+      console.log(`💾 Cache system active`);
+      console.log(`🤖 Automation system active`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
@@ -185,7 +177,7 @@ async function startServer() {
 }
 
 // グレースフルシャットダウン
-process.on('SIGTERM', async() => {
+process.on('SIGTERM', async () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
   
   try {
@@ -206,7 +198,7 @@ process.on('SIGTERM', async() => {
   }
 });
 
-process.on('SIGINT', async() => {
+process.on('SIGINT', async () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
   
   try {

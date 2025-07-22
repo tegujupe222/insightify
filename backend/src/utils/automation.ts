@@ -47,7 +47,7 @@ class AutomationManager {
           id: 'reset-page-views',
           name: 'Reset Monthly Page Views',
           schedule: '0 0 1 * *', // 毎月1日午前0時
-          enabled: false, // 開発中は無効化
+          enabled: true,
           status: 'idle'
         },
         {
@@ -122,13 +122,9 @@ class AutomationManager {
     if (minute === '0' && hour === '*/6') return 6 * 60 * 60 * 1000; // 6時間
     if (minute === '0' && hour === '2') return 24 * 60 * 60 * 1000; // 毎日午前2時
     if (minute === '0' && hour === '3') return 24 * 60 * 60 * 1000; // 毎日午前3時
-    if (minute === '0' && hour === '0' && day === '1') {
-      // 月次タスクは開発中は無効化、本番では手動実行
-      return null; // 月次タスクは無効化
-    }
+    if (minute === '0' && hour === '0' && day === '1') return 30 * 24 * 60 * 60 * 1000; // 毎月1日
     
-    // デフォルト: 1時間ごと
-    return 60 * 60 * 1000;
+    return null;
   }
 
   private async runTask(task: AutomationTask): Promise<void> {
@@ -145,23 +141,23 @@ class AutomationManager {
       logger.info(`Starting automated task: ${task.name}`, { taskId: task.id });
 
       switch (task.id) {
-      case 'daily-backup':
-        await this.runDailyBackup();
-        break;
-      case 'cleanup-logs':
-        await this.runCleanupLogs();
-        break;
-      case 'reset-page-views':
-        await this.runResetPageViews();
-        break;
-      case 'cleanup-cache':
-        await this.runCleanupCache();
-        break;
-      case 'health-check':
-        await this.runHealthCheck();
-        break;
-      default:
-        throw new Error(`Unknown task: ${task.id}`);
+        case 'daily-backup':
+          await this.runDailyBackup();
+          break;
+        case 'cleanup-logs':
+          await this.runCleanupLogs();
+          break;
+        case 'reset-page-views':
+          await this.runResetPageViews();
+          break;
+        case 'cleanup-cache':
+          await this.runCleanupCache();
+          break;
+        case 'health-check':
+          await this.runHealthCheck();
+          break;
+        default:
+          throw new Error(`Unknown task: ${task.id}`);
       }
 
       task.status = 'completed';
@@ -332,7 +328,7 @@ class AutomationManager {
     enabledTasks: number;
     runningTasks: number;
     lastHealthCheck?: Date;
-    } {
+  } {
     const healthCheckTask = this.config.tasks.find(t => t.id === 'health-check');
     
     return {

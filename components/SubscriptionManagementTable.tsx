@@ -25,7 +25,7 @@ export const SubscriptionManagementTable: React.FC = () => {
     fetchSubscriptions();
   }, []);
 
-  const fetchSubscriptions = async() => {
+  const fetchSubscriptions = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('jwt');
@@ -57,7 +57,7 @@ export const SubscriptionManagementTable: React.FC = () => {
     }
   };
 
-  const handleConfirmPayment = async(subscriptionId: string) => {
+  const handleConfirmPayment = async (subscriptionId: string) => {
     if (window.confirm('Confirm payment for this subscription?')) {
       try {
         const token = localStorage.getItem('jwt');
@@ -91,7 +91,7 @@ export const SubscriptionManagementTable: React.FC = () => {
     }
   };
 
-  const handleCancelSubscription = async(subscriptionId: string) => {
+  const handleCancelSubscription = async (subscriptionId: string) => {
     if (window.confirm('Cancel this subscription?')) {
       try {
         const token = localStorage.getItem('jwt');

@@ -22,12 +22,6 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
   pageViewsLimit,
   onUpgrade
 }) => {
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showBankInfo, setShowBankInfo] = useState(false);
-  const [bankInfo, setBankInfo] = useState<BankTransferInfo | null>(null);
-  const [loading, setLoading] = useState(false);
-
   // 管理者の場合は課金UIを非表示
   const isAdmin = currentPlan === 'premium' && pageViewsLimit > 1000000;
   
@@ -54,6 +48,11 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
       </div>
     );
   }
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showBankInfo, setShowBankInfo] = useState(false);
+  const [bankInfo, setBankInfo] = useState<BankTransferInfo | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const usagePercentage = (monthlyPageViews / pageViewsLimit) * 100;
   const isNearLimit = usagePercentage >= 80;
@@ -84,7 +83,7 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
     return 'bg-green-500';
   };
 
-  const fetchBankInfo = async() => {
+  const fetchBankInfo = async () => {
     try {
       const response = await fetch('/api/payments/bank-info');
       const data = await response.json();
@@ -96,7 +95,7 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
     }
   };
 
-  const handleUpgradeClick = async() => {
+  const handleUpgradeClick = async () => {
     setLoading(true);
     try {
       // 銀行振込情報を取得
@@ -109,7 +108,7 @@ export const SubscriptionUpgrade: React.FC<SubscriptionUpgradeProps> = ({
     }
   };
 
-  const handleConfirmUpgrade = async() => {
+  const handleConfirmUpgrade = async () => {
     setLoading(true);
     try {
       // サブスクリプションリクエストを作成

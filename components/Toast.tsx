@@ -36,37 +36,37 @@ const ToastItem: React.FC<ToastProps> = ({ toast, onRemove }) => {
   }, [toast.id, toast.duration, onRemove]);
 
   const getToastStyles = () => {
-    const baseStyles = 'transform transition-all duration-300 ease-in-out max-w-sm w-full';
+    const baseStyles = "transform transition-all duration-300 ease-in-out max-w-sm w-full";
     const visibilityStyles = isVisible 
-      ? 'translate-x-0 opacity-100' 
-      : 'translate-x-full opacity-0';
+      ? "translate-x-0 opacity-100" 
+      : "translate-x-full opacity-0";
 
     switch (toast.type) {
-    case 'success':
-      return `${baseStyles} ${visibilityStyles} bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200`;
-    case 'error':
-      return `${baseStyles} ${visibilityStyles} bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200`;
-    case 'warning':
-      return `${baseStyles} ${visibilityStyles} bg-yellow-50 border border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-200`;
-    case 'info':
-      return `${baseStyles} ${visibilityStyles} bg-blue-50 border border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-200`;
-    default:
-      return `${baseStyles} ${visibilityStyles} bg-gray-50 border border-gray-200 text-gray-800 dark:bg-gray-900/20 dark:border-gray-800 dark:text-gray-200`;
+      case 'success':
+        return `${baseStyles} ${visibilityStyles} bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200`;
+      case 'error':
+        return `${baseStyles} ${visibilityStyles} bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200`;
+      case 'warning':
+        return `${baseStyles} ${visibilityStyles} bg-yellow-50 border border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-200`;
+      case 'info':
+        return `${baseStyles} ${visibilityStyles} bg-blue-50 border border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-200`;
+      default:
+        return `${baseStyles} ${visibilityStyles} bg-gray-50 border border-gray-200 text-gray-800 dark:bg-gray-900/20 dark:border-gray-800 dark:text-gray-200`;
     }
   };
 
   const getIcon = () => {
     switch (toast.type) {
-    case 'success':
-      return <Icon name="check-circle" className="h-5 w-5 text-green-500" />;
-    case 'error':
-      return <Icon name="alert-triangle" className="h-5 w-5 text-red-500" />;
-    case 'warning':
-      return <Icon name="alert-circle" className="h-5 w-5 text-yellow-500" />;
-    case 'info':
-      return <Icon name="info" className="h-5 w-5 text-blue-500" />;
-    default:
-      return <Icon name="info" className="h-5 w-5 text-gray-500" />;
+      case 'success':
+        return <Icon name="check-circle" className="h-5 w-5 text-green-500" />;
+      case 'error':
+        return <Icon name="alert-triangle" className="h-5 w-5 text-red-500" />;
+      case 'warning':
+        return <Icon name="alert-circle" className="h-5 w-5 text-yellow-500" />;
+      case 'info':
+        return <Icon name="info" className="h-5 w-5 text-blue-500" />;
+      default:
+        return <Icon name="info" className="h-5 w-5 text-gray-500" />;
     }
   };
 

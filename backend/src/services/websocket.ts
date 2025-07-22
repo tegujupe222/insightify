@@ -31,8 +31,8 @@ class WebSocketService {
   initialize(server: HTTPServer) {
     this.io = new SocketIOServer(server, {
       cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-        methods: ['GET', 'POST'],
+        origin: process.env.FRONTEND_URL || "http://localhost:5173",
+        methods: ["GET", "POST"],
         credentials: true
       }
     });
@@ -45,7 +45,7 @@ class WebSocketService {
   private setupMiddleware() {
     if (!this.io) return;
 
-    this.io.use(async(socket, next) => {
+    this.io.use(async (socket, next) => {
       try {
         const token = socket.handshake.auth.token;
         if (!token) {

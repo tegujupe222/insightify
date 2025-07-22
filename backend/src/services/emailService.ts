@@ -6,17 +6,15 @@ const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@insightify.com';
 const FROM_NAME = process.env.FROM_NAME || 'Insightify Team';
 
-if (SENDGRID_API_KEY && SENDGRID_API_KEY.startsWith('SG.')) {
+if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
-} else if (SENDGRID_API_KEY) {
-  console.warn('SendGrid API key does not start with "SG.", email functionality will be disabled');
 }
 
 export class EmailService {
   static async sendEmail(to: string, subject: string, content: string, htmlContent?: string): Promise<boolean> {
     try {
-      if (!SENDGRID_API_KEY || !SENDGRID_API_KEY.startsWith('SG.')) {
-        console.warn('SendGrid API key not configured or invalid, skipping email send');
+      if (!SENDGRID_API_KEY) {
+        console.warn('SendGrid API key not configured, skipping email send');
         return false;
       }
 

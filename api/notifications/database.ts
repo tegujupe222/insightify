@@ -5,7 +5,7 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: process.env.NODE_ENV === 'production' ? 1 : 20,
   connectionTimeoutMillis: 2000,
-  idleTimeoutMillis: process.env.NODE_ENV === 'production' ? 1000 : 30000
+  idleTimeoutMillis: process.env.NODE_ENV === 'production' ? 1000 : 30000,
 });
 
 export default pool; 

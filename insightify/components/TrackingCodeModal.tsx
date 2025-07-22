@@ -70,7 +70,7 @@ export const TrackingCodeModal: React.FC<TrackingCodeModalProps> = ({ project, o
                 <ul className="text-blue-300 text-sm space-y-1">
                   {getDomainList().map((domain, index) => (
                     <li key={index} className="flex items-center">
-                      <span className="w-2 h-2 bg-blue-400 rounded-full mr-2" />
+                      <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
                       {domain}
                     </li>
                   ))}

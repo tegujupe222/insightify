@@ -3,8 +3,9 @@ import { Pool } from 'pg';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
+
 
 
 interface AuthUser {
@@ -166,7 +167,7 @@ export default async function handler(req: Request): Promise<Response> {
       }
 
       if (updateFields.length > 0) {
-        updateFields.push('updated_at = NOW()');
+        updateFields.push(`updated_at = NOW()`);
         updateValues.push(projectId);
 
         await client.query(

@@ -29,7 +29,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { key: 'analytics', label: t('navigation.analytics'), icon: 'barChart' as IconName },
     { key: 'realtime', label: t('navigation.realtime'), icon: 'activity' as IconName },
     { key: 'heatmap', label: t('navigation.heatmaps'), icon: 'map' as IconName },
-    { key: 'reports', label: t('navigation.reports'), icon: 'fileText' as IconName }
+    { key: 'reports', label: t('navigation.reports'), icon: 'fileText' as IconName },
   ];
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
@@ -67,13 +67,13 @@ export const Navigation: React.FC<NavigationProps> = ({
             }}
             className={`flex items-center px-6 py-3 rounded-lg text-base font-medium transition-colors duration-200 space-x-3
               ${currentPage === item.key
-            ? isDark
-              ? 'bg-indigo-600 text-white'
-              : 'bg-indigo-100 text-indigo-700'
-            : isDark
-              ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
-              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-          }`}
+                ? isDark
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-indigo-100 text-indigo-700'
+                : isDark
+                ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+              }`}
           >
             <Icon name={item.icon} className="w-5 h-5" />
             <span>{item.label}</span>

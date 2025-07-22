@@ -31,7 +31,7 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
     }
   }, [user]);
 
-  const handleSubmit = async(e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 

@@ -33,7 +33,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  const handleDeleteProject = async(project: Project) => {
+  const handleDeleteProject = async (project: Project) => {
     if (!window.confirm(`プロジェクト「${project.name}」を削除しますか？この操作は取り消せません。`)) {
       return;
     }
@@ -59,7 +59,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
     }
   };
 
-  const handleInviteUser = async(email: string, role: string, message: string) => {
+  const handleInviteUser = async (email: string, role: string, message: string) => {
     if (!selectedProject) return;
 
     try {

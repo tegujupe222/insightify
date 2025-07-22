@@ -1,6 +1,6 @@
 import pool from '../config/database';
 
-export const connectDatabase = async(): Promise<void> => {
+export const connectDatabase = async (): Promise<void> => {
   try {
     // データベース接続テスト
     const client = await pool.connect();
@@ -13,7 +13,7 @@ export const connectDatabase = async(): Promise<void> => {
   }
 };
 
-export const closeDatabase = async(): Promise<void> => {
+export const closeDatabase = async (): Promise<void> => {
   try {
     await pool.end();
     console.log('✅ Database connection closed');
@@ -23,7 +23,7 @@ export const closeDatabase = async(): Promise<void> => {
   }
 };
 
-export const initializeDatabase = async() => {
+export const initializeDatabase = async () => {
   try {
     console.log('🔄 Initializing database...');
 
@@ -210,7 +210,7 @@ export const initializeDatabase = async() => {
   }
 };
 
-export const createDefaultAdmin = async() => {
+export const createDefaultAdmin = async () => {
   try {
     const { UserModel } = await import('../models/User');
     const { isAdminEmail: _isAdminEmail } = await import('./adminUtils');
@@ -237,7 +237,7 @@ export const createDefaultAdmin = async() => {
 };
 
 // Function to refresh materialized views
-export const refreshAnalyticsViews = async() => {
+export const refreshAnalyticsViews = async () => {
   try {
     await pool.query('REFRESH MATERIALIZED VIEW daily_analytics');
     console.log('✅ Analytics views refreshed');
@@ -247,7 +247,7 @@ export const refreshAnalyticsViews = async() => {
 };
 
 // Function to clean old data (for data retention)
-export const cleanOldData = async(daysToKeep: number = 90) => {
+export const cleanOldData = async (daysToKeep: number = 90) => {
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);

@@ -6,7 +6,7 @@ import pool from '../config/database';
 const router = Router();
 
 // システムヘルスチェック
-router.get('/health', async(_req, res) => {
+router.get('/health', async (_req, res) => {
   try {
     const startTime = Date.now();
     
@@ -49,7 +49,7 @@ router.get('/health', async(_req, res) => {
 });
 
 // システム統計
-router.get('/stats', async(_req, res) => {
+router.get('/stats', async (_req, res) => {
   try {
     // ユーザー統計
     const userStats = await pool.query(`
@@ -106,7 +106,7 @@ router.get('/stats', async(_req, res) => {
 });
 
 // ログ取得
-router.get('/logs', async(req, res) => {
+router.get('/logs', async (req, res) => {
   try {
     const { level, limit = 100 } = req.query;
     const logs = await logger.getLogs(level as LogLevel, parseInt(limit as string));
@@ -125,7 +125,7 @@ router.get('/logs', async(req, res) => {
 });
 
 // パフォーマンスメトリクス
-router.get('/performance', async(req, res) => {
+router.get('/performance', async (req, res) => {
   try {
     const { days = 7 } = req.query;
     const daysNum = parseInt(days as string);
@@ -176,7 +176,7 @@ router.get('/performance', async(req, res) => {
 });
 
 // セキュリティイベント
-router.get('/security', async(req, res) => {
+router.get('/security', async (req, res) => {
   try {
     const { days = 7 } = req.query;
     const daysNum = parseInt(days as string);
@@ -221,7 +221,7 @@ router.get('/security', async(req, res) => {
 });
 
 // アラート設定
-router.post('/alerts', async(req, res) => {
+router.post('/alerts', async (req, res) => {
   try {
     const { type, threshold, enabled } = req.body;
     
@@ -247,23 +247,23 @@ router.post('/alerts', async(req, res) => {
 });
 
 // システムメンテナンス
-router.post('/maintenance', async(req, res) => {
+router.post('/maintenance', async (req, res) => {
   try {
     const { action } = req.body;
     
     switch (action) {
-    case 'cleanup_logs':
-      await logger.cleanup(30);
-      break;
-    case 'reset_page_views':
-      await UserModel.resetMonthlyPageViews();
-      break;
-    default:
-      res.status(400).json({
-        success: false,
-        error: 'Invalid maintenance action'
-      });
-      return;
+      case 'cleanup_logs':
+        await logger.cleanup(30);
+        break;
+      case 'reset_page_views':
+        await UserModel.resetMonthlyPageViews();
+        break;
+      default:
+        res.status(400).json({
+          success: false,
+          error: 'Invalid maintenance action'
+        });
+        return;
     }
     
     await logger.info('Maintenance action completed', {

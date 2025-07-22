@@ -40,7 +40,7 @@ export const EnhancedHeatmapViewer: React.FC<EnhancedHeatmapViewerProps> = ({
     fetchHeatmapData();
   }, [projectId, pageUrl, heatmapType, dateRange]);
 
-  const fetchHeatmapData = async() => {
+  const fetchHeatmapData = async () => {
     try {
       setLoading(true);
       
@@ -62,7 +62,7 @@ export const EnhancedHeatmapViewer: React.FC<EnhancedHeatmapViewerProps> = ({
     }
   };
 
-  const fetchElementAnalysis = async() => {
+  const fetchElementAnalysis = async () => {
     try {
       const response = await fetch(
         `/api/heatmap/projects/${projectId}/pages/${encodeURIComponent(pageUrl)}/elements?type=${heatmapType}`
@@ -130,7 +130,7 @@ export const EnhancedHeatmapViewer: React.FC<EnhancedHeatmapViewerProps> = ({
     setShowElementAnalysis(!showElementAnalysis);
   };
 
-  const exportData = async() => {
+  const exportData = async () => {
     try {
       const response = await fetch(
         `/api/heatmap/projects/${projectId}/export?pageUrl=${encodeURIComponent(pageUrl)}&type=${heatmapType}`
@@ -155,19 +155,19 @@ export const EnhancedHeatmapViewer: React.FC<EnhancedHeatmapViewerProps> = ({
 
   const getHeatmapTypeColor = (type: string) => {
     switch (type) {
-    case 'click': return 'text-red-600 dark:text-red-400';
-    case 'scroll': return 'text-green-600 dark:text-green-400';
-    case 'move': return 'text-blue-600 dark:text-blue-400';
-    default: return 'text-gray-600 dark:text-gray-400';
+      case 'click': return 'text-red-600 dark:text-red-400';
+      case 'scroll': return 'text-green-600 dark:text-green-400';
+      case 'move': return 'text-blue-600 dark:text-blue-400';
+      default: return 'text-gray-600 dark:text-gray-400';
     }
   };
 
   const getHeatmapTypeIcon = (type: string) => {
     switch (type) {
-    case 'click': return 'activity';
-    case 'scroll': return 'trendingUp';
-    case 'move': return 'globe';
-    default: return 'map';
+      case 'click': return 'activity';
+      case 'scroll': return 'trendingUp';
+      case 'move': return 'globe';
+      default: return 'map';
     }
   };
 
@@ -175,8 +175,8 @@ export const EnhancedHeatmapViewer: React.FC<EnhancedHeatmapViewerProps> = ({
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4" />
-          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
+          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
         </div>
       </div>
     );

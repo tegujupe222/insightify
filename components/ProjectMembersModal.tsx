@@ -35,7 +35,7 @@ export const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     fetchMembers();
   }, [projectId]);
 
-  const fetchMembers = async() => {
+  const fetchMembers = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('jwt');
@@ -71,7 +71,7 @@ export const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     }
   };
 
-  const handleRoleChange = async(memberId: string, newRole: string) => {
+  const handleRoleChange = async (memberId: string, newRole: string) => {
     try {
       setUpdatingRole(memberId);
       const token = localStorage.getItem('jwt');
@@ -103,7 +103,7 @@ export const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     }
   };
 
-  const handleRemoveMember = async(memberId: string) => {
+  const handleRemoveMember = async (memberId: string) => {
     if (!confirm('このメンバーを削除しますか？')) {
       return;
     }
@@ -141,10 +141,10 @@ export const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-    case 'owner': return 'オーナー';
-    case 'editor': return '編集者';
-    case 'viewer': return '閲覧者';
-    default: return role;
+      case 'owner': return 'オーナー';
+      case 'editor': return '編集者';
+      case 'viewer': return '閲覧者';
+      default: return role;
     }
   };
 

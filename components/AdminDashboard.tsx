@@ -9,6 +9,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { useToast } from './Toast';
 import type { AuthUser, User, Project } from '../types';
 import { Navigation } from './Navigation';
+import { TrackingCodeModal } from './TrackingCodeModal'; // 追加
 
 interface AdminDashboardProps {
     user: AuthUser;
@@ -23,6 +24,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+  const [newlyCreatedProject, setNewlyCreatedProject] = useState<Project | null>(null); // 追加
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -224,6 +226,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
         };
         setProjects(prevProjects => [...prevProjects, newProject]);
         setShowAddProjectModal(false);
+        setNewlyCreatedProject(newProject); // 追加: モーダル表示用
         showToast({
           type: 'success',
           title: '作成完了',
@@ -438,6 +441,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
           <AddProjectModal
             onClose={() => setShowAddProjectModal(false)}
             onAddProject={handleAddProject}
+          />
+        )}
+        {/* Tracking Code Modal: 新規プロジェクト作成時のみ表示 */}
+        {newlyCreatedProject && (
+          <TrackingCodeModal
+            project={newlyCreatedProject}
+            onClose={() => setNewlyCreatedProject(null)}
           />
         )}
       </div>

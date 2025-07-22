@@ -221,7 +221,7 @@ export class HeatmapDataModel {
       params.push(heatmapType);
     }
 
-    query += ' ORDER BY timestamp DESC';
+    query += ` ORDER BY timestamp DESC`;
 
     const result = await pool.query(query, params);
     return result.rows;

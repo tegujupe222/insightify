@@ -118,15 +118,15 @@ class BackupManager {
         duration
       });
 
-      return {
-        id: backupId,
-        timestamp: new Date(),
-        size: 0,
-        type,
-        status: 'failed',
-        duration,
-        error: (error as Error).message
-      };
+             return {
+         id: backupId,
+         timestamp: new Date(),
+         size: 0,
+         type,
+         status: 'failed',
+         duration,
+         error: (error as Error).message
+       };
     }
   }
 
