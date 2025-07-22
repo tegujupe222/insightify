@@ -81,7 +81,8 @@ const AppContent: React.FC<{ user: AuthUser | null; onLogout: () => void; loadin
     }
   };
 
-  const handleAddProject = async(name: string, url: string, domains: string[] = []) => {
+  const handleAddProject = async(name: string, url: string, domains?: string[]) => {
+    const safeDomains = Array.isArray(domains) ? domains : [];
     try {
       const token = localStorage.getItem('jwt');
       if (!token) {
@@ -94,7 +95,7 @@ const AppContent: React.FC<{ user: AuthUser | null; onLogout: () => void; loadin
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name, url, domains })
+        body: JSON.stringify({ name, url, domains: safeDomains })
       });
 
       if (!response.ok) {
