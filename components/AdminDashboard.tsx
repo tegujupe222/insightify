@@ -10,6 +10,7 @@ import { useToast } from './Toast';
 import type { AuthUser, User, Project } from '../types';
 import { Navigation } from './Navigation';
 import { TrackingCodeModal } from './TrackingCodeModal'; // 追加
+import Dashboard from './Dashboard'; // 追加
 
 interface AdminDashboardProps {
     user: AuthUser;
@@ -25,6 +26,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
   const [newlyCreatedProject, setNewlyCreatedProject] = useState<Project | null>(null); // 追加
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null); // 追加
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -249,6 +251,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
   };
 
   const renderTabContent = () => {
+    if (activeTab === 'projects' && selectedProject) {
+      // プロジェクト詳細ダッシュボードを表示
+      return (
+        <div className="bg-gray-800 p-4 rounded-xl shadow-lg border border-gray-700">
+          <button
+            onClick={() => setSelectedProject(null)}
+            className="mb-4 px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
+          >
+            ← プロジェクト一覧に戻る
+          </button>
+          <Dashboard
+            project={selectedProject}
+            user={user}
+            onLogout={onLogout}
+            onBackToProjects={() => setSelectedProject(null)}
+          />
+        </div>
+      );
+    }
     switch (activeTab) {
     case 'dashboard':
       return (
@@ -316,7 +337,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
                 <tbody>
                   {projects.map(project => (
                     <tr key={project.id}>
-                      <td>{project.name}</td>
+                      <td>
+                        <button
+                          className="text-indigo-400 hover:underline hover:text-indigo-300"
+                          onClick={() => setSelectedProject(project)}
+                        >
+                          {project.name}
+                        </button>
+                      </td>
                       <td>{project.url}</td>
                       <td>
                         {(project.domains ?? []).length > 0 ? (
@@ -341,7 +369,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
                           onClick={() => handleDeleteProject(project.id)}
                           className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
                         >
-                                                        削除
+                          削除
                         </button>
                       </td>
                     </tr>
