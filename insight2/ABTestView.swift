@@ -3,300 +3,82 @@ import Charts
 
 struct ABTestView: View {
     @EnvironmentObject var analyticsManager: AnalyticsManager
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var showingCreateTest = false
+    @State private var showingNewTestSheet = false
     @State private var selectedTest: ABTest?
-    @State private var showingTestDetails = false
-    @State private var testToDelete: ABTest?
-    @State private var showingDeleteAlert = false
-    @State private var isLoading = false
-    @State private var errorMessage: String?
+    @State private var showingTestDetail = false
     
     var body: some View {
-        ZStack {
-            DesignSystem.backgroundGradient
-                .ignoresSafeArea()
-            
-            VStack(spacing: 24) {
-                headerView
+        NavigationView {
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 16) {
+                    HStack {
+                        Text("A/Bテスト")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(DesignSystem.textPrimary)
+                        
+                        Spacer()
+                        
+                        AnimatedButton(
+                            title: "新規テスト",
+                            icon: "plus",
+                            style: .primary,
+                            action: { showingNewTestSheet = true }
+                        )
+                    }
+                    
+                    Text("異なるバリアントをテストして、最適なユーザー体験を見つけましょう")
+                        .font(.subheadline)
+                        .foregroundColor(DesignSystem.textSecondary)
+                        .multilineTextAlignment(.leading)
+                }
+                .padding(DesignSystem.padding)
                 
-                if isLoading {
-                    LoadingView(message: "A/Bテストデータを読み込み中...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = errorMessage {
-                    ErrorView(
-                        error: error,
-                        retryAction: {
-                            loadABTestData()
-                        }
+                // Content
+                if analyticsManager.abTests.isEmpty {
+                    EmptyStateView(
+                        icon: "arrow.left.arrow.right",
+                        title: "A/Bテストがありません",
+                        message: "最初のA/Bテストを作成して、ユーザー体験を最適化しましょう",
+                        actionTitle: "テストを作成",
+                        action: { showingNewTestSheet = true }
                     )
                 } else {
                     ScrollView {
-                        VStack(spacing: 20) {
-                            statsOverview
-                            testsListView
-                        }
-                        .padding(.horizontal, 20)
-                    }
-                }
-            }
-        }
-        .onAppear {
-            loadABTestData()
-        }
-        .sheet(isPresented: $showingCreateTest) {
-            CreateABTestView()
-        }
-        .sheet(isPresented: $showingTestDetails) {
-            if let test = selectedTest {
-                ABTestDetailsView(test: test)
-            }
-        }
-        .alert("テストを削除", isPresented: $showingDeleteAlert) {
-            Button("削除", role: .destructive) {
-                if let test = testToDelete {
-                    deleteTest(test)
-                }
-            }
-            Button("キャンセル", role: .cancel) { }
-        } message: {
-            Text("このテストを削除しますか？この操作は元に戻せません。")
-        }
-    }
-    
-    // MARK: - Sub Views
-    
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("A/Bテスト管理")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(DesignSystem.textPrimary)
-                
-                Text("テストの作成、管理、分析")
-                    .font(.subheadline)
-                    .foregroundColor(DesignSystem.textSecondary)
-            }
-            
-            Spacer()
-            
-            AnimatedButton(
-                title: "新しいテスト",
-                icon: "plus",
-                style: .primary,
-                action: {
-                    showingCreateTest = true
-                }
-            )
-        }
-        .padding(.horizontal, 20)
-    }
-    
-    private var statsOverview: some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible()),
-            GridItem(.flexible()),
-            GridItem(.flexible())
-        ], spacing: 16) {
-            let stats = getTestStats()
-            
-            AnimatedMetricCard(
-                title: "アクティブテスト",
-                value: "\(stats.activeTests)",
-                subtitle: "実行中のテスト",
-                change: "\(stats.activeChange)%",
-                isPositive: stats.activeChange >= 0,
-                icon: "play.circle.fill",
-                gradient: DesignSystem.primaryGradient,
-                isLoading: false
-            )
-            
-            AnimatedMetricCard(
-                title: "総テスト数",
-                value: "\(stats.totalTests)",
-                subtitle: "作成されたテスト",
-                change: "\(stats.totalChange)%",
-                isPositive: stats.totalChange >= 0,
-                icon: "chart.bar.fill",
-                gradient: DesignSystem.secondaryGradient,
-                isLoading: false
-            )
-            
-            AnimatedMetricCard(
-                title: "平均改善率",
-                value: "\(String(format: "%.1f", stats.averageImprovement))%",
-                subtitle: "コンバージョン向上",
-                change: "\(stats.improvementChange)%",
-                isPositive: stats.improvementChange >= 0,
-                icon: "arrow.up.circle.fill",
-                gradient: DesignSystem.accentGradient,
-                isLoading: false
-            )
-        }
-    }
-    
-    private var testsListView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("A/Bテスト一覧")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(DesignSystem.textPrimary)
-            
-            let tests = analyticsManager.abTests
-            
-            if tests.isEmpty {
-                EmptyStateView(
-                    icon: "arrow.left.arrow.right",
-                    title: "A/Bテストがありません",
-                    message: "「新しいテスト」ボタンをタップして、最初のA/Bテストを作成してください。",
-                    actionTitle: "新しいテストを作成",
-                    action: {
-                        showingCreateTest = true
-                    }
-                )
-            } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(tests.sorted(by: { $0.startDate > $1.startDate })) { test in
-                        ABTestCard(
-                            test: test,
-                            onTap: {
-                                selectedTest = test
-                                showingTestDetails = true
-                            },
-                            onDelete: {
-                                testToDelete = test
-                                showingDeleteAlert = true
+                        LazyVStack(spacing: 16) {
+                            ForEach(analyticsManager.abTests) { test in
+                                ABTestCard(test: test) {
+                                    selectedTest = test
+                                    showingTestDetail = true
+                                }
                             }
-                        )
+                        }
+                        .padding(DesignSystem.padding)
                     }
+                }
+            }
+            .background(DesignSystem.backgroundGradient)
+            .sheet(isPresented: $showingNewTestSheet) {
+                NewABTestSheet()
+            }
+            .sheet(isPresented: $showingTestDetail) {
+                if let test = selectedTest {
+                    ABTestDetailView(test: test)
                 }
             }
         }
     }
-    
-    // MARK: - Data Processing
-    
-    private func loadABTestData() {
-        isLoading = true
-        errorMessage = nil
-        
-        // 実際のアプリでは、ここでAPIからデータを取得
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            isLoading = false
-        }
-    }
-    
-    private func getTestStats() -> ABTestStats {
-        let tests = analyticsManager.abTests
-        let activeTests = tests.filter { $0.status == .running }.count
-        let totalTests = tests.count
-        
-        let completedTests = tests.filter { $0.status == .completed }
-        let averageImprovement = completedTests.isEmpty ? 0.0 : 
-            completedTests.reduce(0.0) { $0 + calculateTestImprovement($1) } / Double(completedTests.count)
-        
-        // 前回期間との比較（簡易版）
-        let previousTests = getPreviousPeriodTests()
-        let activeChange = previousTests.isEmpty ? 0 : Int((Double(activeTests - previousTests.filter { $0.status == .running }.count) / Double(max(previousTests.count, 1))) * 100)
-        let totalChange = previousTests.isEmpty ? 0 : Int((Double(totalTests - previousTests.count) / Double(max(previousTests.count, 1))) * 100)
-        let improvementChange = 0 // 簡易版
-        
-        return ABTestStats(
-            activeTests: activeTests,
-            totalTests: totalTests,
-            averageImprovement: averageImprovement,
-            activeChange: activeChange,
-            totalChange: totalChange,
-            improvementChange: improvementChange
-        )
-    }
-    
-    private func getPreviousPeriodTests() -> [ABTest] {
-        let allTests = analyticsManager.abTests
-        let cutoffDate = Date().addingTimeInterval(-30 * 24 * 60 * 60) // 30日前
-        
-        return allTests.filter { $0.startDate < cutoffDate }
-    }
-    
-    private func calculateTestImprovement(_ test: ABTest) -> Double {
-        let variants = test.variants
-        guard variants.count >= 2 else { return 0.0 }
-        
-        // コントロールバリアントを特定
-        let controlVariant = variants.first { $0.name.contains("コントロール") || $0.name.contains("Control") || $0.name.contains("Original") }
-        let testVariants = variants.filter { !$0.name.contains("コントロール") && !$0.name.contains("Control") && !$0.name.contains("Original") }
-        
-        guard let control = controlVariant, !testVariants.isEmpty else { return 0.0 }
-        
-        let controlRate = control.conversionRate
-        let controlVisitors = control.visitors
-        
-        // 統計的有意性を計算
-        let improvements = testVariants.map { variant in
-            let testRate = variant.conversionRate
-            let testVisitors = variant.visitors
-            
-            if controlRate == 0 || controlVisitors == 0 || testVisitors == 0 { return 0.0 }
-            
-            // 改善率を計算
-            let improvement = ((testRate - controlRate) / controlRate) * 100
-            
-            // 統計的有意性を考慮（簡易版）
-            let significance = calculateStatisticalSignificance(
-                controlRate: controlRate,
-                controlVisitors: controlVisitors,
-                testRate: testRate,
-                testVisitors: testVisitors
-            )
-            
-            return significance > 0.95 ? improvement : 0.0
-        }
-        
-        return improvements.isEmpty ? 0.0 : improvements.reduce(0, +) / Double(improvements.count)
-    }
-    
-    private func calculateStatisticalSignificance(controlRate: Double, controlVisitors: Int, testRate: Double, testVisitors: Int) -> Double {
-        // 簡易的な統計的有意性計算（Z-test）
-        let controlConversions = Int(controlRate * Double(controlVisitors) / 100)
-        let testConversions = Int(testRate * Double(testVisitors) / 100)
-        
-        let pooledRate = Double(controlConversions + testConversions) / Double(controlVisitors + testVisitors)
-        let standardError = sqrt(pooledRate * (1 - pooledRate) * (1.0/Double(controlVisitors) + 1.0/Double(testVisitors)))
-        
-        let zScore = (testRate - controlRate) / (standardError * 100)
-        
-        // 正規分布の累積分布関数（簡易版）
-        return 1.0 - (1.0 / (1.0 + exp(-zScore)))
-    }
-    
-    private func deleteTest(_ test: ABTest) {
-        analyticsManager.abTests.removeAll { $0.id == test.id }
-        // 実際のアプリでは、ここでAPIに削除リクエストを送信
-    }
 }
-
-// MARK: - Supporting Types
-
-struct ABTestStats {
-    let activeTests: Int
-    let totalTests: Int
-    let averageImprovement: Double
-    let activeChange: Int
-    let totalChange: Int
-    let improvementChange: Int
-}
-
-// MARK: - Supporting Views
 
 struct ABTestCard: View {
     let test: ABTest
     let onTap: () -> Void
-    let onDelete: () -> Void
+    @EnvironmentObject var analyticsManager: AnalyticsManager
     
     var body: some View {
         ModernCardView {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(test.name)
@@ -312,48 +94,70 @@ struct ABTestCard: View {
                     
                     Spacer()
                     
-                    VStack(alignment: .trailing, spacing: 4) {
-                        StatusBadge(status: test.status)
-                        
-                        Text(test.startDate, style: .date)
-                            .font(.caption)
-                            .foregroundColor(DesignSystem.textSecondary)
-                    }
+                    StatusBadge(status: test.status)
                 }
                 
-                // Test progress
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("進捗")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(DesignSystem.textSecondary)
-                        
-                        Spacer()
-                        
-                        Text("\(test.variants.count) バリアント")
-                            .font(.caption)
-                            .foregroundColor(DesignSystem.textSecondary)
+                // Test Stats
+                HStack(spacing: 20) {
+                    StatItem(
+                        title: "バリアント",
+                        value: "\(test.variants.count)",
+                        icon: "rectangle.stack.fill"
+                    )
+                    
+                    StatItem(
+                        title: "トラフィック",
+                        value: "\(Int(test.trafficSplit * 100))%",
+                        icon: "chart.pie.fill"
+                    )
+                    
+                    StatItem(
+                        title: "目標",
+                        value: test.conversionGoal,
+                        icon: "target"
+                    )
+                    
+                    StatItem(
+                        title: "期間",
+                        value: "\(Calendar.current.dateComponents([.day], from: test.startDate, to: test.endDate ?? Date()).day ?? 0)日",
+                        icon: "calendar"
+                    )
+                }
+                
+                // Variants Summary
+                VStack(spacing: 8) {
+                    ForEach(test.variants.prefix(2)) { variant in
+                        HStack {
+                            Text(variant.name)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(DesignSystem.textPrimary)
+                            
+                            Spacer()
+                            
+                            Text("\(variant.visitors)訪問者")
+                                .font(.caption)
+                                .foregroundColor(DesignSystem.textSecondary)
+                            
+                            Text("\(String(format: "%.1f", variant.conversionRate))%")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(DesignSystem.textPrimary)
+                        }
                     }
                     
-                    HStack(spacing: 4) {
-                        Rectangle()
-                            .fill(DesignSystem.textAccent)
-                            .frame(width: max(0, CGFloat(getTestProgress(test)) * 200), height: 8)
-                            .animation(.easeInOut(duration: 0.5), value: getTestProgress(test))
-                        
-                        Spacer()
+                    if test.variants.count > 2 {
+                        Text("他 \(test.variants.count - 2) バリアント")
+                            .font(.caption)
+                            .foregroundColor(DesignSystem.textSecondary)
                     }
-                    .frame(height: 8)
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(4)
                 }
                 
-                // Action buttons
+                // Actions
                 HStack {
                     AnimatedButton(
                         title: "詳細",
-                        icon: "eye",
+                        icon: "chart.bar.fill",
                         style: .secondary,
                         action: onTap
                     )
@@ -363,525 +167,428 @@ struct ABTestCard: View {
                     if test.status == .running {
                         AnimatedButton(
                             title: "停止",
-                            icon: "stop",
+                            icon: "pause.fill",
                             style: .danger,
                             action: {
                                 // テストを停止する処理
                             }
                         )
-                    } else {
+                    } else if test.status == .paused {
                         AnimatedButton(
-                            title: "削除",
-                            icon: "trash",
-                            style: .danger,
-                            action: onDelete
+                            title: "再開",
+                            icon: "play.fill",
+                            style: .success,
+                            action: {
+                                // テストを再開する処理
+                            }
                         )
                     }
                 }
             }
-            .padding(DesignSystem.smallPadding)
-        }
-        .onTapGesture {
-            onTap()
-        }
-    }
-    
-    private func getTestProgress(_ test: ABTest) -> Double {
-        let totalDuration = test.endDate?.timeIntervalSince(test.startDate) ?? 30 * 24 * 60 * 60
-        let elapsed = Date().timeIntervalSince(test.startDate)
-        return min(max(elapsed / totalDuration, 0), 1)
-    }
-}
-
-struct StatusBadge: View {
-    let status: ABTestStatus
-    
-    var body: some View {
-        Text(status.displayName)
-            .font(.caption)
-            .fontWeight(.medium)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(status.color.opacity(0.2))
-            )
-            .foregroundColor(status.color)
-    }
-}
-
-extension ABTestStatus {
-    var displayName: String {
-        return self.rawValue
-    }
-    
-    var color: Color {
-        switch self {
-        case .draft: return .gray
-        case .running: return .green
-        case .paused: return .orange
-        case .completed: return .blue
         }
     }
 }
 
-struct CreateABTestView: View {
-    @EnvironmentObject var analyticsManager: AnalyticsManager
+struct NewABTestSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var testName = ""
-    @State private var testDescription = ""
+    @EnvironmentObject var analyticsManager: AnalyticsManager
+    
+    @State private var name = ""
+    @State private var description = ""
     @State private var conversionGoal = ""
-    @State private var trafficSplit = 50.0
-    @State private var variants: [ABTestVariant] = []
+    @State private var trafficSplit: Double = 0.5
+    @State private var startDate = Date()
+    @State private var endDate = Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date()
+    @State private var variants: [ABTestVariantInput] = [
+        ABTestVariantInput(name: "コントロール", description: "現在のバージョン", changes: []),
+        ABTestVariantInput(name: "バリアントA", description: "新しいバージョン", changes: [])
+    ]
     @State private var showingAddVariant = false
-    @State private var isLoading = false
     
     var body: some View {
         NavigationView {
-            ZStack {
-                DesignSystem.backgroundGradient
-                    .ignoresSafeArea()
+            Form {
+                Section("テスト情報") {
+                    TextField("テスト名", text: $name)
+                    TextField("説明", text: $description, axis: .vertical)
+                        .lineLimit(3...6)
+                    TextField("コンバージョン目標", text: $conversionGoal)
+                }
                 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Basic info
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("テスト基本情報")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(DesignSystem.textPrimary)
-                            
-                            VStack(spacing: 12) {
-                                TextField("テスト名", text: $testName)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                                
-                                TextField("説明", text: $testDescription, axis: .vertical)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                                    .lineLimit(3...6)
-                                
-                                TextField("コンバージョン目標", text: $conversionGoal)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                            }
-                        }
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                                .fill(DesignSystem.cardBackground)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                                        .stroke(DesignSystem.cardBorder, lineWidth: 1)
-                                )
-                        )
-                        
-                        // Traffic split
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("トラフィック分割")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(DesignSystem.textPrimary)
-                            
-                            VStack(spacing: 12) {
-                                HStack {
-                                    Text("テストグループ: \(Int(trafficSplit))%")
-                                        .font(.subheadline)
-                                        .foregroundColor(DesignSystem.textSecondary)
-                                    
-                                    Spacer()
-                                    
-                                    Text("コントロール: \(Int(100 - trafficSplit))%")
-                                        .font(.subheadline)
-                                        .foregroundColor(DesignSystem.textSecondary)
-                                }
-                                
-                                Slider(value: $trafficSplit, in: 10...90, step: 5)
-                                    .accentColor(DesignSystem.textAccent)
-                            }
-                        }
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                                .fill(DesignSystem.cardBackground)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                                        .stroke(DesignSystem.cardBorder, lineWidth: 1)
-                                )
-                        )
-                        
-                        // Variants
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Text("バリアント")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(DesignSystem.textPrimary)
-                                
-                                Spacer()
-                                
-                                AnimatedButton(
-                                    title: "追加",
-                                    icon: "plus",
-                                    style: .primary,
-                                    action: {
-                                        showingAddVariant = true
-                                    }
-                                )
-                            }
-                            
-                            if variants.isEmpty {
-                                EmptyStateView(
-                                    icon: "rectangle.stack",
-                                    title: "バリアントがありません",
-                                    message: "「追加」ボタンをタップしてバリアントを追加してください。",
-                                    actionTitle: "バリアントを追加",
-                                    action: {
-                                        showingAddVariant = true
-                                    }
-                                )
-                            } else {
-                                LazyVStack(spacing: 12) {
-                                    ForEach(variants.indices, id: \.self) { index in
-                                        VariantCard(variant: variants[index])
-                                    }
-                                }
-                            }
-                        }
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                                .fill(DesignSystem.cardBackground)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                                        .stroke(DesignSystem.cardBorder, lineWidth: 1)
-                                )
-                        )
+                Section("設定") {
+                    HStack {
+                        Text("トラフィック分割")
+                        Spacer()
+                        Text("\(Int(trafficSplit * 100))%")
+                            .foregroundColor(DesignSystem.textSecondary)
                     }
-                    .padding()
-                }
-            }
-            .navigationTitle("新しいA/Bテスト")
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    AnimatedButton(
-                        title: "キャンセル",
-                        icon: "xmark",
-                        style: .secondary,
-                        action: {
-                            dismiss()
-                        }
-                    )
+                    
+                    Slider(value: $trafficSplit, in: 0.1...0.9, step: 0.1)
+                    
+                    DatePicker("開始日", selection: $startDate, displayedComponents: .date)
+                    DatePicker("終了日", selection: $endDate, displayedComponents: .date)
                 }
                 
-                ToolbarItem(placement: .automatic) {
-                    AnimatedButton(
-                        title: "作成",
-                        icon: "checkmark",
-                        style: .primary,
-                        isLoading: isLoading,
-                        action: createTest
-                    )
+                Section("バリアント") {
+                    ForEach(Array(variants.enumerated()), id: \.offset) { index, variant in
+                        VariantRow(variant: $variants[index])
+                    }
+                    
+                    Button("バリアントを追加") {
+                        variants.append(ABTestVariantInput(name: "バリアント\(variants.count + 1)", description: "", changes: []))
+                    }
+                    .foregroundColor(DesignSystem.textAccent)
                 }
             }
-        }
-        .sheet(isPresented: $showingAddVariant) {
-            AddVariantView { variant in
-                variants.append(variant)
+            .navigationTitle("新規A/Bテスト")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("キャンセル") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("作成") {
+                        createTest()
+                    }
+                    .disabled(name.isEmpty || conversionGoal.isEmpty || variants.count < 2)
+                }
             }
         }
     }
     
     private func createTest() {
-        guard !testName.isEmpty && !variants.isEmpty else { return }
-        
-        isLoading = true
+        let abTestVariants = variants.map { input in
+            ABTestVariant(
+                name: input.name,
+                description: input.description,
+                visitors: 0,
+                conversions: 0,
+                conversionRate: 0.0,
+                revenue: nil,
+                changes: input.changes
+            )
+        }
         
         let newTest = ABTest(
-            name: testName,
-            description: testDescription,
-            startDate: Date(),
-            endDate: Calendar.current.date(byAdding: .day, value: 30, to: Date()),
+            name: name,
+            description: description,
+            startDate: startDate,
+            endDate: endDate,
             status: .draft,
-            variants: variants,
-            trafficSplit: trafficSplit / 100,
+            variants: abTestVariants,
+            trafficSplit: trafficSplit,
             conversionGoal: conversionGoal
         )
         
+        // AnalyticsManagerにテストを追加
         analyticsManager.abTests.append(newTest)
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            isLoading = false
-            dismiss()
-        }
+        dismiss()
     }
 }
 
-struct VariantCard: View {
-    let variant: ABTestVariant
+struct VariantRow: View {
+    @Binding var variant: ABTestVariantInput
+    @State private var showingChanges = false
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(variant.name)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(DesignSystem.textPrimary)
-                
-                Text(variant.description)
-                    .font(.caption)
-                    .foregroundColor(DesignSystem.textSecondary)
-                    .lineLimit(2)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                TextField("バリアント名", text: $variant.name)
+                Spacer()
+                Button("変更") {
+                    showingChanges = true
+                }
+                .foregroundColor(DesignSystem.textAccent)
             }
             
-            Spacer()
+            TextField("説明", text: $variant.description, axis: .vertical)
+                .lineLimit(2...4)
             
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("\(Int(variant.conversionRate))%")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(DesignSystem.textPrimary)
-                
-                Text("コンバージョン率")
+            if !variant.changes.isEmpty {
+                Text("\(variant.changes.count)個の変更")
                     .font(.caption)
                     .foregroundColor(DesignSystem.textSecondary)
             }
         }
-        .padding(DesignSystem.smallPadding)
-        .background(
-            RoundedRectangle(cornerRadius: DesignSystem.smallCornerRadius)
-                .fill(DesignSystem.cardBackground.opacity(0.5))
-        )
+        .sheet(isPresented: $showingChanges) {
+            ChangesSheet(changes: $variant.changes)
+        }
     }
 }
 
-struct AddVariantView: View {
+struct ChangesSheet: View {
+    @Binding var changes: [ElementChange]
     @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
-    @State private var description = ""
-    @State private var conversionRate = 0.0
-    let onAdd: (ABTestVariant) -> Void
+    
+    @State private var selector = ""
+    @State private var property = ""
+    @State private var value = ""
     
     var body: some View {
         NavigationView {
-            ZStack {
-                DesignSystem.backgroundGradient
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("バリアント情報")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(DesignSystem.textPrimary)
-                        
-                        VStack(spacing: 12) {
-                            TextField("バリアント名", text: $name)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                            
-                            TextField("説明", text: $description, axis: .vertical)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .lineLimit(3...6)
-                            
-                            HStack {
-                                Text("コンバージョン率: \(Int(conversionRate))%")
-                                    .font(.subheadline)
-                                    .foregroundColor(DesignSystem.textSecondary)
-                                
-                                Spacer()
-                            }
-                            
-                            Slider(value: $conversionRate, in: 0...100, step: 1)
-                                .accentColor(DesignSystem.textAccent)
+            Form {
+                Section("変更を追加") {
+                    TextField("CSSセレクター", text: $selector)
+                    TextField("プロパティ", text: $property)
+                    TextField("値", text: $value)
+                    
+                    Button("追加") {
+                        if !selector.isEmpty && !property.isEmpty && !value.isEmpty {
+                            changes.append(ElementChange(selector: selector, property: property, value: value))
+                            selector = ""
+                            property = ""
+                            value = ""
                         }
                     }
-                    .padding()
+                    .disabled(selector.isEmpty || property.isEmpty || value.isEmpty)
+                }
+                
+                Section("現在の変更") {
+                    ForEach(Array(changes.enumerated()), id: \.offset) { index, change in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(change.selector)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                            Text("\(change.property): \(change.value)")
+                                .font(.caption)
+                                .foregroundColor(DesignSystem.textSecondary)
+                        }
+                        .swipeActions {
+                            Button("削除", role: .destructive) {
+                                changes.remove(at: index)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("要素変更")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完了") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct ABTestDetailView: View {
+    let test: ABTest
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var analyticsManager: AnalyticsManager
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(test.name)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(DesignSystem.textPrimary)
+                                
+                                Text(test.description)
+                                    .font(.subheadline)
+                                    .foregroundColor(DesignSystem.textSecondary)
+                            }
+                            
+                            Spacer()
+                            
+                            StatusBadge(status: test.status)
+                        }
+                        
+                        HStack {
+                            InfoRow(label: "開始日", value: test.startDate.formatted(date: .abbreviated, time: .omitted))
+                            Spacer()
+                            if let endDate = test.endDate {
+                                InfoRow(label: "終了日", value: endDate.formatted(date: .abbreviated, time: .omitted))
+                            }
+                        }
+                        
+                        HStack {
+                            InfoRow(label: "トラフィック分割", value: "\(Int(test.trafficSplit * 100))%")
+                            Spacer()
+                            InfoRow(label: "コンバージョン目標", value: test.conversionGoal)
+                        }
+                    }
+                    .padding(DesignSystem.padding)
                     .background(
                         RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
                             .fill(DesignSystem.cardBackground)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                                    .stroke(DesignSystem.cardBorder, lineWidth: 1)
-                            )
                     )
                     
-                    Spacer()
-                }
-                .padding()
-            }
-            .navigationTitle("バリアント追加")
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    AnimatedButton(
-                        title: "キャンセル",
-                        icon: "xmark",
-                        style: .secondary,
-                        action: {
-                            dismiss()
-                        }
-                    )
-                }
-                
-                ToolbarItem(placement: .automatic) {
-                    AnimatedButton(
-                        title: "追加",
-                        icon: "checkmark",
-                        style: .primary,
-                        action: {
-                            let variant = ABTestVariant(
-                                name: name,
-                                description: description,
-                                visitors: 0,
-                                conversions: 0,
-                                conversionRate: conversionRate,
-                                revenue: nil,
-                                changes: nil
-                            )
-                            onAdd(variant)
-                            dismiss()
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-struct ABTestDetailsView: View {
-    let test: ABTest
-    @Environment(\.dismiss) private var dismiss
-    
-    private var testInfoCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("テスト情報")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(DesignSystem.textPrimary)
-            
-            VStack(spacing: 12) {
-                InfoRow(label: "テスト名", value: test.name)
-                InfoRow(label: "説明", value: test.description)
-                InfoRow(label: "ステータス", value: test.status.displayName)
-                                                InfoRow(label: "開始日", value: test.startDate, style: .medium)
-                                if let endDate = test.endDate {
-                                    InfoRow(label: "終了日", value: endDate, style: .medium)
+                    // Results Chart
+                    ModernCardView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("コンバージョン率比較")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(DesignSystem.textPrimary)
+                            
+                            Chart {
+                                ForEach(test.variants, id: \.id) { variant in
+                                    BarMark(
+                                        x: .value("バリアント", variant.name),
+                                        y: .value("コンバージョン率", variant.conversionRate)
+                                    )
+                                    .foregroundStyle(by: .value("バリアント", variant.name))
                                 }
-                InfoRow(label: "コンバージョン目標", value: test.conversionGoal)
-                InfoRow(label: "トラフィック分割", value: "\(Int(test.trafficSplit * 100))%")
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                .fill(DesignSystem.cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                        .stroke(DesignSystem.cardBorder, lineWidth: 1)
-                )
-        )
-    }
-    
-    private var variantsPerformanceCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("バリアント性能")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(DesignSystem.textPrimary)
-            
-            LazyVStack(spacing: 12) {
-                ForEach(test.variants, id: \.name) { variant in
-                    VariantPerformanceCard(variant: variant)
-                }
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                .fill(DesignSystem.cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                        .stroke(DesignSystem.cardBorder, lineWidth: 1)
-                )
-        )
-    }
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                DesignSystem.backgroundGradient
-                    .ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 20) {
-                        testInfoCard
-                        variantsPerformanceCard
-                    }
-                    .padding()
-                }
-            }
-            .navigationTitle("テスト詳細")
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    AnimatedButton(
-                        title: "閉じる",
-                        icon: "xmark",
-                        style: .secondary,
-                        action: {
-                            dismiss()
+                            }
+                            .frame(height: 200)
+                            .chartYAxis {
+                                AxisMarks { value in
+                                    AxisValueLabel {
+                                        Text("\(value.as(Double.self)?.formatted(.number.precision(.fractionLength(1))) ?? "")%")
+                                    }
+                                }
+                            }
                         }
-                    )
+                    }
+                    
+                    // Variants Detail
+                    ForEach(test.variants) { variant in
+                        VariantDetailCard(variant: variant)
+                    }
+                }
+                .padding(DesignSystem.padding)
+            }
+            .background(DesignSystem.backgroundGradient)
+            .navigationTitle("テスト詳細")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        if test.status == .running {
+                            Button("一時停止") {
+                                // テストを一時停止
+                            }
+                        } else if test.status == .paused {
+                            Button("再開") {
+                                // テストを再開
+                            }
+                        }
+                        
+                        Button("結果をエクスポート") {
+                            // 結果をエクスポート
+                        }
+                        
+                        Button("削除", role: .destructive) {
+                            // テストを削除
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("閉じる") {
+                        dismiss()
+                    }
                 }
             }
         }
     }
 }
 
-struct VariantPerformanceCard: View {
+struct VariantDetailCard: View {
     let variant: ABTestVariant
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(variant.name)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(DesignSystem.textPrimary)
-                
-                Spacer()
-                
-                Text("\(Int(variant.conversionRate))%")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(DesignSystem.textAccent)
-            }
-            
-            VStack(spacing: 8) {
+        ModernCardView {
+            VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Text("訪問者: \(variant.visitors)")
-                        .font(.caption)
-                        .foregroundColor(DesignSystem.textSecondary)
+                    Text(variant.name)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(DesignSystem.textPrimary)
                     
                     Spacer()
                     
-                    Text("コンバージョン: \(variant.conversions)")
-                        .font(.caption)
-                        .foregroundColor(DesignSystem.textSecondary)
+                    if variant.conversionRate > 0 {
+                        Text("\(String(format: "%.1f", variant.conversionRate))%")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.green)
+                    }
                 }
                 
-                HStack(spacing: 4) {
-                    Rectangle()
-                        .fill(DesignSystem.textAccent)
-                        .frame(width: max(0, CGFloat(variant.conversionRate / 100) * 200), height: 8)
-                        .animation(.easeInOut(duration: 0.5), value: variant.conversionRate)
+                Text(variant.description)
+                    .font(.subheadline)
+                    .foregroundColor(DesignSystem.textSecondary)
+                
+                // Stats
+                HStack(spacing: 20) {
+                    StatItem(
+                        title: "訪問者",
+                        value: "\(variant.visitors)",
+                        icon: "person.2.fill"
+                    )
                     
-                    Spacer()
+                    StatItem(
+                        title: "コンバージョン",
+                        value: "\(variant.conversions)",
+                        icon: "target"
+                    )
+                    
+                    if let revenue = variant.revenue {
+                        StatItem(
+                            title: "売上",
+                            value: "¥\(Int(revenue))",
+                            icon: "yensign.circle.fill"
+                        )
+                    }
                 }
-                .frame(height: 8)
-                .background(Color.gray.opacity(0.2))
-                .cornerRadius(4)
+                
+                // Changes
+                if let changes = variant.changes, !changes.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("変更内容")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(DesignSystem.textPrimary)
+                        
+                        ForEach(Array(changes.enumerated()), id: \.offset) { index, change in
+                            HStack {
+                                Text("•")
+                                    .foregroundColor(DesignSystem.textSecondary)
+                                
+                                Text("\(change.selector)")
+                                    .font(.caption)
+                                    .foregroundColor(DesignSystem.textPrimary)
+                                
+                                Spacer()
+                                
+                                Text("\(change.property): \(change.value)")
+                                    .font(.caption)
+                                    .foregroundColor(DesignSystem.textSecondary)
+                            }
+                        }
+                    }
+                }
             }
         }
-        .padding(DesignSystem.smallPadding)
-        .background(
-            RoundedRectangle(cornerRadius: DesignSystem.smallCornerRadius)
-                .fill(DesignSystem.cardBackground.opacity(0.5))
-        )
     }
+}
+
+// MARK: - Supporting Types
+
+struct ABTestVariantInput {
+    var name: String
+    var description: String
+    var changes: [ElementChange]
+}
+
+#Preview {
+    ABTestView()
+        .environmentObject(AnalyticsManager())
 }

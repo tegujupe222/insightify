@@ -677,497 +677,732 @@ class TrackingScriptGenerator {
 }
 
 struct TrackingScriptView: View {
-    @EnvironmentObject var analyticsManager: AnalyticsManager
-    @State private var selectedWebsite = "https://example.com"
+    @EnvironmentObject var websiteManager: WebsiteManager
+    @State private var showingAddWebsiteSheet = false
+    @State private var selectedWebsite: Website?
+    @State private var showingScriptDetail = false
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 16) {
+                    HStack {
+                        Text("トラッキングスクリプト")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(DesignSystem.textPrimary)
+                        
+                        Spacer()
+                        
+                        AnimatedButton(
+                            title: "ウェブサイト追加",
+                            icon: "plus",
+                            style: .primary,
+                            action: { showingAddWebsiteSheet = true }
+                        )
+                    }
+                    
+                    Text("ウェブサイトにトラッキングスクリプトを埋め込んで、ユーザーの行動を分析しましょう")
+                        .font(.subheadline)
+                        .foregroundColor(DesignSystem.textSecondary)
+                        .multilineTextAlignment(.leading)
+                }
+                .padding(DesignSystem.padding)
+                
+                // Content
+                if websiteManager.websites.isEmpty {
+                    EmptyStateView(
+                        icon: "antenna.radiowaves.left.and.right",
+                        title: "ウェブサイトがありません",
+                        message: "最初のウェブサイトを追加して、トラッキングを開始しましょう",
+                        actionTitle: "ウェブサイトを追加",
+                        action: { showingAddWebsiteSheet = true }
+                    )
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(websiteManager.websites) { website in
+                                WebsiteTrackingCard(website: website) {
+                                    selectedWebsite = website
+                                    showingScriptDetail = true
+                                }
+                            }
+                        }
+                        .padding(DesignSystem.padding)
+                    }
+                }
+            }
+            .background(DesignSystem.backgroundGradient)
+            .sheet(isPresented: $showingAddWebsiteSheet) {
+                AddWebsiteSheet()
+            }
+            .sheet(isPresented: $showingScriptDetail) {
+                if let website = selectedWebsite {
+                    ScriptDetailView(website: website)
+                }
+            }
+        }
+    }
+}
+
+struct WebsiteTrackingCard: View {
+    let website: Website
+    let onTap: () -> Void
+    @EnvironmentObject var websiteManager: WebsiteManager
+    
+    var body: some View {
+        ModernCardView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(website.name)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(DesignSystem.textPrimary)
+                        
+                        Text(website.url)
+                            .font(.subheadline)
+                            .foregroundColor(DesignSystem.textSecondary)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 4) {
+                        StatusIndicator(isActive: website.isActive)
+                        
+                        if let lastData = website.lastDataReceived {
+                            Text("最終データ: \(lastData.formatted(date: .abbreviated, time: .shortened))")
+                                .font(.caption)
+                                .foregroundColor(DesignSystem.textSecondary)
+                        } else {
+                            Text("データなし")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                        }
+                    }
+                }
+                
+                // Settings Summary
+                HStack(spacing: 16) {
+                    SettingBadge(
+                        title: "トラッキング",
+                        isEnabled: website.settings.trackingEnabled,
+                        icon: "antenna.radiowaves.left.and.right"
+                    )
+                    
+                    SettingBadge(
+                        title: "ヒートマップ",
+                        isEnabled: website.settings.heatmapEnabled,
+                        icon: "flame.fill"
+                    )
+                    
+                    SettingBadge(
+                        title: "A/Bテスト",
+                        isEnabled: website.settings.abTestingEnabled,
+                        icon: "arrow.left.arrow.right"
+                    )
+                    
+                    SettingBadge(
+                        title: "プライバシー",
+                        isEnabled: website.settings.privacyMode,
+                        icon: "lock.fill"
+                    )
+                }
+                
+                // Actions
+                HStack {
+                    AnimatedButton(
+                        title: "スクリプト表示",
+                        icon: "doc.text",
+                        style: .secondary,
+                        action: onTap
+                    )
+                    
+                    Spacer()
+                    
+                    AnimatedButton(
+                        title: website.isActive ? "停止" : "開始",
+                        icon: website.isActive ? "pause.fill" : "play.fill",
+                        style: website.isActive ? .danger : .success,
+                        action: {
+                            websiteManager.toggleWebsiteStatus(website)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+struct StatusIndicator: View {
+    let isActive: Bool
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(isActive ? Color.green : Color.red)
+                .frame(width: 8, height: 8)
+            
+            Text(isActive ? "アクティブ" : "停止中")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(isActive ? .green : .red)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill((isActive ? Color.green : Color.red).opacity(0.1))
+        )
+    }
+}
+
+struct SettingBadge: View {
+    let title: String
+    let isEnabled: Bool
+    let icon: String
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundColor(isEnabled ? DesignSystem.textPrimary : DesignSystem.textSecondary)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(isEnabled ? DesignSystem.textPrimary : DesignSystem.textSecondary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(isEnabled ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+        )
+    }
+}
+
+struct AddWebsiteSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var websiteManager: WebsiteManager
+    
+    @State private var name = ""
+    @State private var url = ""
+    @State private var description = ""
     @State private var trackingEnabled = true
     @State private var heatmapEnabled = true
     @State private var abTestingEnabled = true
     @State private var privacyMode = false
-    @State private var showingScriptPreview = false
-    
-    private var trackingScript: String {
-        """
-        <!-- Insight Analytics Tracking Script -->
-        <script>
-        (function() {
-            'use strict';
-            
-            // Configuration
-            const config = {
-                website: '\(selectedWebsite)',
-                trackingEnabled: \(trackingEnabled),
-                heatmapEnabled: \(heatmapEnabled),
-                abTestingEnabled: \(abTestingEnabled),
-                privacyMode: \(privacyMode)
-            };
-            
-            // Generate session ID
-            function generateSessionId() {
-                return 'session_' + Math.random().toString(36).substr(2, 9);
-            }
-            
-            // Get or create session ID
-            function getSessionId() {
-                let sessionId = sessionStorage.getItem('insight_session_id');
-                if (!sessionId) {
-                    sessionId = generateSessionId();
-                    sessionStorage.setItem('insight_session_id', sessionId);
-                }
-                return sessionId;
-            }
-            
-            // Send analytics data
-            function sendAnalytics(eventType, data) {
-                if (!config.trackingEnabled) return;
-                
-                const payload = {
-                    eventType: eventType,
-                    url: window.location.href,
-                    sessionId: getSessionId(),
-                    timestamp: new Date().toISOString(),
-                    userAgent: navigator.userAgent,
-                    referrer: document.referrer,
-                    ...data
-                };
-                
-                // Send to analytics endpoint
-                fetch('https://api.insight-analytics.com/events', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload)
-                }).catch(console.error);
-            }
-            
-            // Track page view
-            function trackPageView() {
-                sendAnalytics('pageview', {
-                    title: document.title,
-                    path: window.location.pathname
-                });
-            }
-            
-            // Track clicks
-            function trackClick(event) {
-                if (!config.heatmapEnabled) return;
-                
-                const element = event.target;
-                const rect = element.getBoundingClientRect();
-                
-                sendAnalytics('click', {
-                    elementId: element.id || null,
-                    elementClass: element.className || null,
-                    elementTag: element.tagName.toLowerCase(),
-                    x: event.clientX,
-                    y: event.clientY,
-                    elementX: rect.left + event.clientX,
-                    elementY: rect.top + event.clientY
-                });
-            }
-            
-            // Track scroll depth
-            function trackScroll() {
-                if (!config.heatmapEnabled) return;
-                
-                const scrollDepth = Math.round(
-                    (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100
-                );
-                
-                sendAnalytics('scroll', {
-                    scrollDepth: scrollDepth,
-                    scrollY: window.scrollY,
-                    documentHeight: document.body.scrollHeight
-                });
-            }
-            
-            // A/B Testing
-            function getABTestVariant(testId) {
-                if (!config.abTestingEnabled) return null;
-                
-                let variant = sessionStorage.getItem(`insight_ab_${testId}`);
-                if (!variant) {
-                    variant = Math.random() < 0.5 ? 'A' : 'B';
-                    sessionStorage.setItem(`insight_ab_${testId}`, variant);
-                }
-                return variant;
-            }
-            
-            // Apply A/B test changes
-            function applyABTest(testId, changes) {
-                const variant = getABTestVariant(testId);
-                if (variant === 'B' && changes) {
-                    changes.forEach(change => {
-                        const element = document.querySelector(change.selector);
-                        if (element) {
-                            switch (change.property) {
-                                case 'textContent':
-                                    element.textContent = change.value;
-                                    break;
-                                case 'backgroundColor':
-                                    element.style.backgroundColor = change.value;
-                                    break;
-                                case 'fontSize':
-                                    element.style.fontSize = change.value;
-                                    break;
-                                case 'display':
-                                    element.style.display = change.value;
-                                    break;
-                            }
-                        }
-                    });
-                }
-            }
-            
-            // Track conversions
-            function trackConversion(goal, value = 0) {
-                sendAnalytics('conversion', {
-                    goal: goal,
-                    value: value
-                });
-            }
-            
-            // Privacy mode - anonymize data
-            function anonymizeData(data) {
-                if (!config.privacyMode) return data;
-                
-                return {
-                    ...data,
-                    userAgent: 'Anonymous',
-                    referrer: null,
-                    sessionId: null
-                };
-            }
-            
-            // Initialize tracking
-            function init() {
-                // Track initial page view
-                trackPageView();
-                
-                // Add event listeners
-                if (config.heatmapEnabled) {
-                    document.addEventListener('click', trackClick);
-                    window.addEventListener('scroll', throttle(trackScroll, 1000));
-                }
-                
-                // Track form submissions as conversions
-                document.addEventListener('submit', function(event) {
-                    const form = event.target;
-                    const goal = form.dataset.conversionGoal || 'form_submission';
-                    trackConversion(goal);
-                });
-                
-                // Track link clicks to external sites
-                document.addEventListener('click', function(event) {
-                    const link = event.target.closest('a');
-                    if (link && link.hostname !== window.location.hostname) {
-                        trackConversion('external_link', 0);
-                    }
-                });
-                
-                // Load A/B tests
-                if (config.abTestingEnabled) {
-                    loadABTests();
-                }
-            }
-            
-            // Load A/B tests from server
-            function loadABTests() {
-                fetch('https://api.insight-analytics.com/ab-tests')
-                    .then(response => response.json())
-                    .then(tests => {
-                        tests.forEach(test => {
-                            if (test.status === 'running') {
-                                applyABTest(test.id, test.variants.find(v => v.name === 'B')?.changes);
-                            }
-                        });
-                    })
-                    .catch(console.error);
-            }
-            
-            // Utility function for throttling
-            function throttle(func, limit) {
-                let inThrottle;
-                return function() {
-                    const args = arguments;
-                    const context = this;
-                    if (!inThrottle) {
-                        func.apply(context, args);
-                        inThrottle = true;
-                        setTimeout(() => inThrottle = false, limit);
-                    }
-                }
-            }
-            
-            // Start tracking when DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
-            } else {
-                init();
-            }
-            
-            // Expose functions globally for manual tracking
-            window.insight = {
-                trackPageView,
-                trackClick,
-                trackConversion,
-                getABTestVariant,
-                applyABTest
-            };
-            
-        })();
-        </script>
-        """
-    }
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("トラッキング設定")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                    
-                    Text("ウェブサイトへのトラッキングコード管理")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Button("スクリプトをプレビュー") {
-                    showingScriptPreview = true
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding(.horizontal)
-            
-            // Configuration
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("基本設定")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("ウェブサイトURL")
-                                .font(.subheadline)
-                            
-                            Spacer()
-                            
-                            TextField("https://example.com", text: $selectedWebsite)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 300)
-                        }
-                        
-                        Toggle("トラッキングを有効にする", isOn: $trackingEnabled)
-                        Toggle("ヒートマップを有効にする", isOn: $heatmapEnabled)
-                        Toggle("A/Bテストを有効にする", isOn: $abTestingEnabled)
-                        Toggle("プライバシーモード", isOn: $privacyMode)
-                    }
-                }
-                .padding()
-                .background(Color(.controlBackgroundColor))
-                .cornerRadius(12)
-            }
-            .padding(.horizontal)
-            
-            // Installation instructions
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("インストール手順")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("1. HTMLのheadタグ内にスクリプトを追加")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                            Text("以下のコードをウェブサイトのHTMLの<head>セクションに追加してください。")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("2. 設定を確認")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                            Text("ウェブサイトのURLとトラッキング設定が正しいことを確認してください。")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("3. データの確認")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                            Text("数分後にダッシュボードでデータが表示されることを確認してください。")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                                    }
-                    .padding()
-                    .background(Color(.controlBackgroundColor))
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal)
-                
-                // Code snippet
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("トラッキングコード")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                        
-                        Button("コピー") {
-                            copyToClipboard()
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    
-                    ScrollView {
-                                            Text(trackingScript)
-                        .font(.system(.caption, design: .monospaced))
-                        .padding()
-                        .background(Color(.textBackgroundColor))
-                        .cornerRadius(8)
-                    }
-                    .frame(height: 300)
-                }
-                .padding()
-                .background(Color(.controlBackgroundColor))
-                .cornerRadius(12)
-            }
-            .padding(.horizontal)
-            
-            // Status indicators
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 16) {
-                StatusCard(
-                    title: "トラッキング状態",
-                    status: trackingEnabled ? "有効" : "無効",
-                    color: trackingEnabled ? .green : .red,
-                    icon: "antenna.radiowaves.left.and.right"
-                )
-                
-                StatusCard(
-                    title: "ヒートマップ",
-                    status: heatmapEnabled ? "有効" : "無効",
-                    color: heatmapEnabled ? .green : .red,
-                    icon: "flame.fill"
-                )
-                
-                StatusCard(
-                    title: "A/Bテスト",
-                    status: abTestingEnabled ? "有効" : "無効",
-                    color: abTestingEnabled ? .green : .red,
-                    icon: "arrow.left.arrow.right"
-                )
-            }
-            .padding(.horizontal)
-        }
-        .sheet(isPresented: $showingScriptPreview) {
-            ScriptPreviewView(script: trackingScript)
-        }
-    }
-    
-    private func copyToClipboard() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(trackingScript, forType: .string)
-    }
-}
-
-// MARK: - Status Card
-
-struct StatusCard: View {
-    let title: String
-    let status: String
-    let color: Color
-    let icon: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(color)
-                    .font(.title2)
-                
-                Spacer()
-                
-                Text(status)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(color)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding()
-        .background(Color(.controlBackgroundColor))
-        .cornerRadius(12)
-    }
-}
-
-// MARK: - Script Preview View
-
-struct ScriptPreviewView: View {
-    let script: String
-    @Environment(\.dismiss) private var dismiss
+    @State private var customEvents: [String] = []
+    @State private var conversionGoals: [String] = []
+    @State private var newCustomEvent = ""
+    @State private var newConversionGoal = ""
+    @State private var showingValidationError = false
+    @State private var validationMessage = ""
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("トラッキングスクリプトプレビュー")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    Text("このコードをウェブサイトのHTMLの<head>セクションに追加してください:")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Text(script)
-                        .font(.system(.caption, design: .monospaced))
-                        .padding()
-                        .background(Color(.textBackgroundColor))
-                        .cornerRadius(8)
+            Form {
+                Section("基本情報") {
+                    TextField("ウェブサイト名", text: $name)
+                    TextField("URL", text: $url)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    TextField("説明", text: $description, axis: .vertical)
+                        .lineLimit(3...6)
                 }
-                .padding()
+                
+                Section("トラッキング設定") {
+                    Toggle("ページビュートラッキング", isOn: $trackingEnabled)
+                    Toggle("ヒートマップ", isOn: $heatmapEnabled)
+                    Toggle("A/Bテスト", isOn: $abTestingEnabled)
+                    Toggle("プライバシーモード", isOn: $privacyMode)
+                }
+                
+                Section("カスタムイベント") {
+                    ForEach(customEvents, id: \.self) { event in
+                        HStack {
+                            Text(event)
+                            Spacer()
+                            Button("削除") {
+                                customEvents.removeAll { $0 == event }
+                            }
+                            .foregroundColor(.red)
+                        }
+                    }
+                    
+                    HStack {
+                        TextField("新しいイベント", text: $newCustomEvent)
+                        Button("追加") {
+                            if !newCustomEvent.isEmpty {
+                                customEvents.append(newCustomEvent)
+                                newCustomEvent = ""
+                            }
+                        }
+                        .disabled(newCustomEvent.isEmpty)
+                    }
+                }
+                
+                Section("コンバージョン目標") {
+                    ForEach(conversionGoals, id: \.self) { goal in
+                        HStack {
+                            Text(goal)
+                            Spacer()
+                            Button("削除") {
+                                conversionGoals.removeAll { $0 == goal }
+                            }
+                            .foregroundColor(.red)
+                        }
+                    }
+                    
+                    HStack {
+                        TextField("新しい目標", text: $newConversionGoal)
+                        Button("追加") {
+                            if !newConversionGoal.isEmpty {
+                                conversionGoals.append(newConversionGoal)
+                                newConversionGoal = ""
+                            }
+                        }
+                        .disabled(newConversionGoal.isEmpty)
+                    }
+                }
             }
-            .navigationTitle("スクリプトプレビュー")
+            .navigationTitle("ウェブサイト追加")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("閉じる") {
+                    Button("キャンセル") {
                         dismiss()
                     }
                 }
                 
-                ToolbarItem(placement: .primaryAction) {
-                    Button("コピー") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(script, forType: .string)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("追加") {
+                        addWebsite()
+                    }
+                    .disabled(name.isEmpty || url.isEmpty)
+                }
+            }
+            .alert("バリデーションエラー", isPresented: $showingValidationError) {
+                Button("OK") { }
+            } message: {
+                Text(validationMessage)
+            }
+        }
+    }
+    
+    private func addWebsite() {
+        // バリデーション
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            validationMessage = "ウェブサイト名を入力してください"
+            showingValidationError = true
+            return
+        }
+        
+        guard !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            validationMessage = "URLを入力してください"
+            showingValidationError = true
+            return
+        }
+        
+        guard websiteManager.validateWebsiteURL(url) else {
+            validationMessage = "有効なURLを入力してください"
+            showingValidationError = true
+            return
+        }
+        
+        guard websiteManager.isWebsiteNameUnique(name) else {
+            validationMessage = "この名前は既に使用されています"
+            showingValidationError = true
+            return
+        }
+        
+        // 設定を作成
+        let settings = WebsiteSettings(
+            trackingEnabled: trackingEnabled,
+            heatmapEnabled: heatmapEnabled,
+            abTestingEnabled: abTestingEnabled,
+            privacyMode: privacyMode,
+            customEvents: customEvents,
+            conversionGoals: conversionGoals
+        )
+        
+        // ウェブサイトを追加
+        websiteManager.addWebsite(
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            url: url.trimmingCharacters(in: .whitespacesAndNewlines),
+            description: description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : description.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        
+        dismiss()
+    }
+}
+
+struct ScriptDetailView: View {
+    let website: Website
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var websiteManager: WebsiteManager
+    @State private var showingSettingsSheet = false
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(website.name)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(DesignSystem.textPrimary)
+                                
+                                Text(website.url)
+                                    .font(.subheadline)
+                                    .foregroundColor(DesignSystem.textSecondary)
+                            }
+                            
+                            Spacer()
+                            
+                            StatusIndicator(isActive: website.isActive)
+                        }
+                        
+                        if let description = website.description {
+                            Text(description)
+                                .font(.subheadline)
+                                .foregroundColor(DesignSystem.textSecondary)
+                        }
+                    }
+                    .padding(DesignSystem.padding)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
+                            .fill(DesignSystem.cardBackground)
+                    )
+                    
+                    // Settings
+                    ModernCardView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Text("トラッキング設定")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(DesignSystem.textPrimary)
+                                
+                                Spacer()
+                                
+                                AnimatedButton(
+                                    title: "編集",
+                                    icon: "pencil",
+                                    style: .secondary,
+                                    action: { showingSettingsSheet = true }
+                                )
+                            }
+                            
+                            VStack(spacing: 12) {
+                                SettingRow(
+                                    title: "ページビュートラッキング",
+                                    isEnabled: website.settings.trackingEnabled,
+                                    icon: "antenna.radiowaves.left.and.right"
+                                )
+                                
+                                SettingRow(
+                                    title: "ヒートマップ",
+                                    isEnabled: website.settings.heatmapEnabled,
+                                    icon: "flame.fill"
+                                )
+                                
+                                SettingRow(
+                                    title: "A/Bテスト",
+                                    isEnabled: website.settings.abTestingEnabled,
+                                    icon: "arrow.left.arrow.right"
+                                )
+                                
+                                SettingRow(
+                                    title: "プライバシーモード",
+                                    isEnabled: website.settings.privacyMode,
+                                    icon: "lock.fill"
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Tracking Script
+                    ModernCardView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Text("トラッキングスクリプト")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(DesignSystem.textPrimary)
+                                
+                                Spacer()
+                                
+                                AnimatedButton(
+                                    title: "コピー",
+                                    icon: "doc.on.doc",
+                                    style: .secondary,
+                                    action: copyScript
+                                )
+                            }
+                            
+                            ScrollView {
+                                Text(website.trackingCode)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(DesignSystem.textPrimary)
+                                    .padding(12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: DesignSystem.smallCornerRadius)
+                                            .fill(Color.gray.opacity(0.1))
+                                    )
+                            }
+                            .frame(maxHeight: 300)
+                        }
+                    }
+                    
+                    // Instructions
+                    ModernCardView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("実装手順")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(DesignSystem.textPrimary)
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                InstructionStep(
+                                    number: 1,
+                                    title: "スクリプトをコピー",
+                                    description: "上記のトラッキングスクリプトをコピーします"
+                                )
+                                
+                                InstructionStep(
+                                    number: 2,
+                                    title: "HTMLに埋め込み",
+                                    description: "ウェブサイトの</head>タグの直前にスクリプトを貼り付けます"
+                                )
+                                
+                                InstructionStep(
+                                    number: 3,
+                                    title: "動作確認",
+                                    description: "ページを読み込んで、コンソールにエラーがないことを確認します"
+                                )
+                                
+                                InstructionStep(
+                                    number: 4,
+                                    title: "データ確認",
+                                    description: "ダッシュボードでデータが受信されていることを確認します"
+                                )
+                            }
+                        }
+                    }
+                }
+                .padding(DesignSystem.padding)
+            }
+            .background(DesignSystem.backgroundGradient)
+            .navigationTitle("スクリプト詳細")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("閉じる") {
+                        dismiss()
+                    }
+                }
+            }
+            .sheet(isPresented: $showingSettingsSheet) {
+                SettingsSheet(website: website)
+            }
+        }
+    }
+    
+    private func copyScript() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(website.trackingCode, forType: .string)
+    }
+}
+
+struct SettingRow: View {
+    let title: String
+    let isEnabled: Bool
+    let icon: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.subheadline)
+                .foregroundColor(isEnabled ? DesignSystem.textPrimary : DesignSystem.textSecondary)
+                .frame(width: 20)
+            
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(DesignSystem.textPrimary)
+            
+            Spacer()
+            
+            Image(systemName: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundColor(isEnabled ? .green : .red)
+        }
+    }
+}
+
+struct InstructionStep: View {
+    let number: Int
+    let title: String
+    let description: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text("\(number)")
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .frame(width: 20, height: 20)
+                .background(
+                    Circle()
+                        .fill(DesignSystem.textAccent)
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(DesignSystem.textPrimary)
+                
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(DesignSystem.textSecondary)
+            }
+        }
+    }
+}
+
+struct SettingsSheet: View {
+    let website: Website
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var websiteManager: WebsiteManager
+    
+    @State private var trackingEnabled: Bool
+    @State private var heatmapEnabled: Bool
+    @State private var abTestingEnabled: Bool
+    @State private var privacyMode: Bool
+    @State private var customEvents: [String]
+    @State private var conversionGoals: [String]
+    @State private var newCustomEvent = ""
+    @State private var newConversionGoal = ""
+    
+    init(website: Website) {
+        self.website = website
+        self._trackingEnabled = State(initialValue: website.settings.trackingEnabled)
+        self._heatmapEnabled = State(initialValue: website.settings.heatmapEnabled)
+        self._abTestingEnabled = State(initialValue: website.settings.abTestingEnabled)
+        self._privacyMode = State(initialValue: website.settings.privacyMode)
+        self._customEvents = State(initialValue: website.settings.customEvents)
+        self._conversionGoals = State(initialValue: website.settings.conversionGoals)
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("トラッキング設定") {
+                    Toggle("ページビュートラッキング", isOn: $trackingEnabled)
+                    Toggle("ヒートマップ", isOn: $heatmapEnabled)
+                    Toggle("A/Bテスト", isOn: $abTestingEnabled)
+                    Toggle("プライバシーモード", isOn: $privacyMode)
+                }
+                
+                Section("カスタムイベント") {
+                    ForEach(customEvents, id: \.self) { event in
+                        HStack {
+                            Text(event)
+                            Spacer()
+                            Button("削除") {
+                                customEvents.removeAll { $0 == event }
+                            }
+                            .foregroundColor(.red)
+                        }
+                    }
+                    
+                    HStack {
+                        TextField("新しいイベント", text: $newCustomEvent)
+                        Button("追加") {
+                            if !newCustomEvent.isEmpty {
+                                customEvents.append(newCustomEvent)
+                                newCustomEvent = ""
+                            }
+                        }
+                        .disabled(newCustomEvent.isEmpty)
+                    }
+                }
+                
+                Section("コンバージョン目標") {
+                    ForEach(conversionGoals, id: \.self) { goal in
+                        HStack {
+                            Text(goal)
+                            Spacer()
+                            Button("削除") {
+                                conversionGoals.removeAll { $0 == goal }
+                            }
+                            .foregroundColor(.red)
+                        }
+                    }
+                    
+                    HStack {
+                        TextField("新しい目標", text: $newConversionGoal)
+                        Button("追加") {
+                            if !newConversionGoal.isEmpty {
+                                conversionGoals.append(newConversionGoal)
+                                newConversionGoal = ""
+                            }
+                        }
+                        .disabled(newConversionGoal.isEmpty)
+                    }
+                }
+            }
+            .navigationTitle("設定編集")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("キャンセル") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        saveSettings()
                     }
                 }
             }
         }
+    }
+    
+    private func saveSettings() {
+        let newSettings = WebsiteSettings(
+            trackingEnabled: trackingEnabled,
+            heatmapEnabled: heatmapEnabled,
+            abTestingEnabled: abTestingEnabled,
+            privacyMode: privacyMode,
+            customEvents: customEvents,
+            conversionGoals: conversionGoals
+        )
+        
+        let updatedWebsite = Website(
+            id: website.id,
+            name: website.name,
+            url: website.url,
+            description: website.description,
+            trackingCode: websiteManager.generateTrackingCode(for: website.url, settings: newSettings),
+            isActive: website.isActive,
+            createdAt: website.createdAt,
+            lastDataReceived: website.lastDataReceived,
+            settings: newSettings
+        )
+        
+        websiteManager.updateWebsite(updatedWebsite)
+        dismiss()
     }
 }
 
 #Preview {
     TrackingScriptView()
-        .environmentObject(AnalyticsManager())
+        .environmentObject(WebsiteManager())
 } 

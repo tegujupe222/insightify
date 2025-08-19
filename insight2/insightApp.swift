@@ -44,6 +44,13 @@ struct insightApp: App {
         
         // エラーハンドリングの設定
         setupErrorHandling()
+        
+        // APIサーバーの自動起動（開発環境のみ）
+        #if DEBUG
+        Task {
+            await apiServerManager.startServer()
+        }
+        #endif
     }
     
     private func setupErrorHandling() {

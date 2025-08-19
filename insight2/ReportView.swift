@@ -23,684 +23,552 @@ struct TrafficSourceData {
 }
 
 struct ReportView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var reportManager: ReportManager
-    @EnvironmentObject var websiteManager: WebsiteManager
-    @EnvironmentObject var analyticsManager: AnalyticsManager
-    @State private var selectedMonth = Date()
-    @State private var selectedWebsite: Website?
-    @State private var showingReportPreview = false
-    @State private var generatedReport: MonthlyReport?
-    @State private var showingExportSheet = false
-    @State private var exportURL: URL?
-    @State private var isLoading = false
-    @State private var errorMessage: String?
-    
-    private let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter
-    }()
-    
-    var primaryColor: Color { DesignSystem.textPrimary }
-    var secondaryColor: Color { DesignSystem.textSecondary }
-    var accentColor: Color { DesignSystem.textAccent }
-    var cardBackground: Color { DesignSystem.cardBackground }
-    var cardBorder: Color { DesignSystem.cardBorder }
+    @State private var showingNewReportSheet = false
+    @State private var selectedReport: Report?
+    @State private var showingReportDetail = false
     
     var body: some View {
-        ZStack {
-            DesignSystem.backgroundGradient
-                .ignoresSafeArea()
-            
-            VStack(spacing: 20) {
-                headerView
-                
-                if isLoading {
-                    LoadingView(message: "レポートデータを読み込み中...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = errorMessage {
-                    ErrorView(
-                        error: error,
-                        retryAction: {
-                            loadReportData()
-                        }
-                    )
-                } else {
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            reportGenerationForm
-                            generatedReportsList
-                        }
-                        .padding(.horizontal, 20)
-                    }
-                }
-            }
-        }
-        .onAppear {
-            loadReportData()
-        }
-        .sheet(isPresented: $showingReportPreview) {
-            if let report = generatedReport {
-                ReportPreviewView(report: report)
-                    .presentationDetents([.large])
-            }
-        }
-        .sheet(isPresented: $showingExportSheet) {
-            // macOSではShareSheetは使わない
-            // if let url = exportURL {
-            //     ShareSheet(items: [url])
-            // }
-        }
-    }
-    
-    // MARK: - Sub Views
-    
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("月次レポート")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(primaryColor)
-                
-                Text("月次アナリティクスレポートの生成と管理")
-                    .font(.subheadline)
-                    .foregroundColor(secondaryColor)
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-    }
-    
-    private var reportGenerationForm: some View {
-        ModernCardView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("レポート生成")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(primaryColor)
-                
-                VStack(spacing: 12) {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 16) {
                     HStack {
-                        Text("対象月")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(primaryColor)
+                        Text("レポート")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(DesignSystem.textPrimary)
                         
                         Spacer()
                         
-                        DatePicker("", selection: $selectedMonth, displayedComponents: [.date])
-                            .datePickerStyle(.compact)
-                            .labelsHidden()
-                            .frame(width: 120)
+                        AnimatedButton(
+                            title: "新規レポート",
+                            icon: "plus",
+                            style: .primary,
+                            action: { showingNewReportSheet = true }
+                        )
                     }
                     
-                        HStack {
-                            Text("対象サイト")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(primaryColor)
-                            
-                            Spacer()
-                            
-                            Menu(selectedWebsite?.name ?? "全サイト") {
-                                Button("全サイト") {
-                                    selectedWebsite = nil
-                                }
-                                ForEach(websiteManager.websites) { website in
-                                    Button(website.name) {
-                                        selectedWebsite = website
-                                    }
-                                }
-                            }
-                            .menuStyle(BorderlessButtonMenuStyle())
-                            .frame(minWidth: 120, maxWidth: 200)
-                            .clipped()
-                        }
-                }
-                
-                AnimatedButton(
-                    title: "レポート生成",
-                    icon: "doc.text",
-                    style: .primary,
-                    isLoading: reportManager.isGeneratingReport,
-                    action: generateReport
-                )
-            }
-        }
-    }
-    
-    private var generatedReportsList: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("生成済みレポート")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(primaryColor)
-            
-            if reportManager.reports.isEmpty {
-                EmptyStateView(
-                    icon: "doc.text",
-                    title: "レポートがありません",
-                    message: "月次レポートを生成してください",
-                    actionTitle: "レポート生成",
-                    action: generateReport
-                )
-            } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(reportManager.reports) { report in
-                        ReportCard(
-                            report: report,
-                            onPreview: {
-                                generatedReport = report
-                                showingReportPreview = true
-                            },
-                            onExport: {
-                                exportReport(report)
+                    if let errorMessage = reportManager.errorMessage {
+                        ErrorView(
+                            error: errorMessage,
+                            retryAction: {
+                                // エラーをクリア
+                                reportManager.errorMessage = nil
                             }
                         )
                     }
                 }
+                .padding(DesignSystem.padding)
+                
+                // Content
+                if reportManager.reports.isEmpty {
+                    EmptyStateView(
+                        icon: "doc.text.chart",
+                        title: "レポートがありません",
+                        message: "新しいレポートを作成して、アナリティクスデータを分析しましょう",
+                        actionTitle: "レポートを作成",
+                        action: { showingNewReportSheet = true }
+                    )
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(reportManager.reports) { report in
+                                ReportCardView(report: report) {
+                                    selectedReport = report
+                                    showingReportDetail = true
+                                }
+                            }
+                        }
+                        .padding(DesignSystem.padding)
+                    }
+                }
+            }
+            .background(DesignSystem.backgroundGradient)
+            .sheet(isPresented: $showingNewReportSheet) {
+                NewReportSheet()
+            }
+            .sheet(isPresented: $showingReportDetail) {
+                if let report = selectedReport {
+                    ReportDetailView(report: report)
+                }
             }
         }
     }
+}
+
+struct ReportCardView: View {
+    let report: Report
+    let onTap: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
     
-    // MARK: - Actions
-    
-    private func loadReportData() {
-        isLoading = true
-        errorMessage = nil
-        
-        Task {
-            do {
-                try await analyticsManager.fetchAnalyticsData()
-                isLoading = false
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
+    var body: some View {
+        ModernCardView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Image(systemName: report.type.icon)
+                        .font(.title2)
+                        .foregroundColor(DesignSystem.textAccent)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(report.title)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(DesignSystem.textPrimary)
+                        
+                        Text(report.description)
+                            .font(.subheadline)
+                            .foregroundColor(DesignSystem.textSecondary)
+                            .lineLimit(2)
+                    }
+                    
+                    Spacer()
+                    
+                    StatusBadge(status: report.status)
+                }
+                
+                // Quick Stats
+                HStack(spacing: 20) {
+                    StatItem(
+                        title: "ページビュー",
+                        value: "\(report.data.pageViews)",
+                        icon: "eye.fill"
+                    )
+                    
+                    StatItem(
+                        title: "訪問者",
+                        value: "\(report.data.uniqueVisitors)",
+                        icon: "person.2.fill"
+                    )
+                    
+                    StatItem(
+                        title: "コンバージョン",
+                        value: "\(report.data.conversions)",
+                        icon: "target"
+                    )
+                    
+                    StatItem(
+                        title: "売上",
+                        value: "¥\(Int(report.data.revenue))",
+                        icon: "yensign.circle.fill"
+                    )
+                }
+                
+                // Date Range
+                HStack {
+                    Image(systemName: "calendar")
+                        .font(.caption)
+                        .foregroundColor(DesignSystem.textSecondary)
+                    
+                    Text("\(report.dateRange.startDate.formatted(date: .abbreviated, time: .omitted)) - \(report.dateRange.endDate.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption)
+                        .foregroundColor(DesignSystem.textSecondary)
+                    
+                    Spacer()
+                    
+                    Text(report.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundColor(DesignSystem.textSecondary)
                 }
             }
+        }
+        .onTapGesture {
+            onTap()
+        }
+    }
+}
+
+struct StatItem: View {
+    let title: String
+    let value: String
+    let icon: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundColor(DesignSystem.textSecondary)
+            
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(DesignSystem.textPrimary)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(DesignSystem.textSecondary)
+        }
+    }
+}
+
+struct StatusBadge: View {
+    let status: ReportStatus
+    
+    var body: some View {
+        Text(status.rawValue)
+            .font(.caption)
+            .fontWeight(.medium)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(statusColor.opacity(0.2))
+            )
+            .foregroundColor(statusColor)
+    }
+    
+    private var statusColor: Color {
+        switch status {
+        case .generating:
+            return .orange
+        case .generated:
+            return .green
+        case .failed:
+            return .red
+        case .scheduled:
+            return .blue
+        }
+    }
+}
+
+struct NewReportSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var reportManager: ReportManager
+    
+    @State private var title = ""
+    @State private var description = ""
+    @State private var selectedType: ReportType = .weekly
+    @State private var startDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+    @State private var endDate = Date()
+    @State private var isGenerating = false
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("レポート情報") {
+                    TextField("タイトル", text: $title)
+                    TextField("説明", text: $description, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+                
+                Section("レポートタイプ") {
+                    Picker("タイプ", selection: $selectedType) {
+                        ForEach(ReportType.allCases, id: \.self) { type in
+                            HStack {
+                                Image(systemName: type.icon)
+                                Text(type.rawValue)
+                            }
+                            .tag(type)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+                
+                Section("期間") {
+                    DatePicker("開始日", selection: $startDate, displayedComponents: .date)
+                    DatePicker("終了日", selection: $endDate, displayedComponents: .date)
+                }
+                
+                Section {
+                    HStack {
+                        Text("期間")
+                        Spacer()
+                        Text("\(Calendar.current.dateComponents([.day], from: startDate, to: endDate).day ?? 0)日間")
+                            .foregroundColor(DesignSystem.textSecondary)
+                    }
+                }
+            }
+            .navigationTitle("新規レポート")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("キャンセル") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("生成") {
+                        generateReport()
+                    }
+                    .disabled(title.isEmpty || isGenerating)
+                }
+            }
+        }
+        .onChange(of: selectedType) { oldValue, newValue in
+            updateDateRange(for: newValue)
+        }
+    }
+    
+    private func updateDateRange(for type: ReportType) {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        switch type {
+        case .daily:
+            startDate = calendar.startOfDay(for: now)
+            endDate = now
+        case .weekly:
+            startDate = calendar.date(byAdding: .day, value: -7, to: now) ?? now
+            endDate = now
+        case .monthly:
+            startDate = calendar.date(byAdding: .month, value: -1, to: now) ?? now
+            endDate = now
+        case .custom:
+            // カスタムの場合は変更しない
+            break
         }
     }
     
     private func generateReport() {
-        guard !reportManager.isGeneratingReport else { return }
+        guard !title.isEmpty else { return }
         
-        let calendar = Calendar.current
-        let month = calendar.component(.month, from: selectedMonth)
-        let year = calendar.component(.year, from: selectedMonth)
+        isGenerating = true
         
-        let report = MonthlyReport(
-            month: selectedMonth,
-            websiteId: selectedWebsite?.id,
-            websiteName: selectedWebsite?.name ?? "全サイト",
-            pageViews: getPageViewsForMonth(month: month, year: year),
-            uniqueVisitors: getUniqueVisitorsForMonth(month: month, year: year),
-            clickEvents: getClickEventsForMonth(month: month, year: year),
-            conversions: getConversionsForMonth(month: month, year: year),
-            conversionRate: getConversionRateForMonth(month: month, year: year),
-            totalRevenue: getRevenueForMonth(month: month, year: year),
-            averageSessionDuration: getAverageSessionDurationForMonth(month: month, year: year),
-            topPages: getTopPageViewsForMonth(month: month, year: year),
-            topClickEvents: getTopClickEventsForMonth(month: month, year: year),
-            funnelData: getConversionFunnelForMonth(month: month, year: year),
-            abTestResults: getABTestResultsForMonth(month: month, year: year),
-            heatmapData: getHeatmapDataForMonth(month: month, year: year)
-        )
+        let dateRange = DateRange(startDate: startDate, endDate: endDate)
         
-        reportManager.reports.append(report)
-        generatedReport = report
-        showingReportPreview = true
-    }
-    
-    private func exportReport(_ report: MonthlyReport) {
-        let exportData = generateExportData(for: report)
-        
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("report_\(report.month.timeIntervalSince1970).txt")
-        
-        do {
-            try exportData.write(to: tempURL)
-            exportURL = tempURL
-            showingExportSheet = true
-        } catch {
-            errorMessage = "エクスポートエラー: \(error.localizedDescription)"
+        Task {
+            await reportManager.generateReport(
+                title: title,
+                description: description,
+                type: selectedType,
+                dateRange: dateRange
+            )
+            
+            await MainActor.run {
+                isGenerating = false
+                dismiss()
+            }
         }
-    }
-    
-    // MARK: - Data Helpers
-    
-    private func getPageViewsForMonth(month: Int, year: Int) -> Int {
-        let events = analyticsManager.pageViews
-        return events.filter { event in
-            let eventMonth = Calendar.current.component(.month, from: event.timestamp)
-            let eventYear = Calendar.current.component(.year, from: event.timestamp)
-            return eventMonth == month && eventYear == year
-        }.count
-    }
-    
-    private func getUniqueVisitorsForMonth(month: Int, year: Int) -> Int {
-        let events = analyticsManager.pageViews
-        let filteredEvents = events.filter { event in
-            let eventMonth = Calendar.current.component(.month, from: event.timestamp)
-            let eventYear = Calendar.current.component(.year, from: event.timestamp)
-            return eventMonth == month && eventYear == year
-        }
-        
-        return Set(filteredEvents.map { $0.sessionId }).count
-    }
-    
-    private func getConversionsForMonth(month: Int, year: Int) -> Int {
-        let events = analyticsManager.conversionEvents
-        return events.filter { event in
-            let eventMonth = Calendar.current.component(.month, from: event.timestamp)
-            let eventYear = Calendar.current.component(.year, from: event.timestamp)
-            return eventMonth == month && eventYear == year
-        }.count
-    }
-    
-    private func getRevenueForMonth(month: Int, year: Int) -> Double {
-        let events = analyticsManager.conversionEvents
-        return events.filter { event in
-            let eventMonth = Calendar.current.component(.month, from: event.timestamp)
-            let eventYear = Calendar.current.component(.year, from: event.timestamp)
-            return eventMonth == month && eventYear == year
-        }.reduce(0) { $0 + $1.value }
-    }
-    
-    private func getConversionFunnelForMonth(month: Int, year: Int) -> [FunnelStep] {
-        return [
-            FunnelStep(name: "訪問", url: "/", visitors: 1000, conversions: 800, conversionRate: 80.0, dropOffRate: 20.0),
-            FunnelStep(name: "商品ページ", url: "/products", visitors: 800, conversions: 400, conversionRate: 50.0, dropOffRate: 50.0),
-            FunnelStep(name: "カート追加", url: "/cart", visitors: 400, conversions: 200, conversionRate: 50.0, dropOffRate: 50.0),
-            FunnelStep(name: "購入完了", url: "/checkout", visitors: 200, conversions: 200, conversionRate: 100.0, dropOffRate: 0.0)
-        ]
-    }
-    
-    private func getClickEventsForMonth(month: Int, year: Int) -> Int {
-        analyticsManager.clickEvents.filter {
-            let m = Calendar.current.component(.month, from: $0.timestamp)
-            let y = Calendar.current.component(.year, from: $0.timestamp)
-            return m == month && y == year
-        }.count
-    }
-    
-    private func getConversionRateForMonth(month: Int, year: Int) -> Double {
-        let conversions = getConversionsForMonth(month: month, year: year)
-        let pageViews = getPageViewsForMonth(month: month, year: year)
-        return pageViews > 0 ? Double(conversions) / Double(pageViews) * 100 : 0
-    }
-    
-    private func getAverageSessionDurationForMonth(month: Int, year: Int) -> TimeInterval {
-        return 0
-    }
-    
-    private func getTopPageViewsForMonth(month: Int, year: Int) -> [PageViewData] {
-        let events = analyticsManager.pageViews.filter {
-            let m = Calendar.current.component(.month, from: $0.timestamp)
-            let y = Calendar.current.component(.year, from: $0.timestamp)
-            return m == month && y == year
-        }
-        let grouped = Dictionary(grouping: events, by: { $0.url })
-        let sortedPages = grouped.map { (url, events) in
-            (url, events.count)
-        }.sorted { $0.1 > $1.1 }
-        
-        return sortedPages.prefix(10).compactMap { url, _ in
-            events.first { $0.url == url }
-        }
-    }
-    
-    private func getTopClickEventsForMonth(month: Int, year: Int) -> [ClickEvent] {
-        analyticsManager.clickEvents.filter {
-            let m = Calendar.current.component(.month, from: $0.timestamp)
-            let y = Calendar.current.component(.year, from: $0.timestamp)
-            return m == month && y == year
-        }.prefix(10).map { $0 }
-    }
-    
-    private func getABTestResultsForMonth(month: Int, year: Int) -> [ABTest] {
-        analyticsManager.abTests.filter {
-            let m = Calendar.current.component(.month, from: $0.startDate)
-            let y = Calendar.current.component(.year, from: $0.startDate)
-            return m == month && y == year
-        }
-    }
-    
-    private func getHeatmapDataForMonth(month: Int, year: Int) -> [ClickEvent] {
-        analyticsManager.clickEvents.filter {
-            let m = Calendar.current.component(.month, from: $0.timestamp)
-            let y = Calendar.current.component(.year, from: $0.timestamp)
-            return m == month && y == year
-        }
-    }
-    
-    private func generateExportData(for report: MonthlyReport) -> Data {
-        let reportText = """
-        ========================================
-        月次アナリティクスレポート
-        ========================================
-        
-        レポート期間: \(dateFormatter.string(from: report.month))
-        対象サイト: \(report.websiteName ?? "全サイト")
-        
-        ========================================
-        基本統計
-        ========================================
-        • ページビュー: \(report.pageViews)回
-        • ユニーク訪問者: \(report.uniqueVisitors)人
-        • コンバージョン: \(report.conversions)件
-        • コンバージョン率: \(String(format: "%.2f", report.conversionRate))%
-        • 総売上: ¥\(Int(report.totalRevenue))
-        • 平均セッション時間: \(formatDuration(report.averageSessionDuration))
-        
-        ========================================
-        トップページ（ページビュー数順）
-        ========================================
-        \(report.topPages.prefix(10).enumerated().map { index, page in
-            "\(index + 1). \(page.url) (\(page.sessionId)セッション)"
-        }.joined(separator: "\n"))
-        
-        ========================================
-        コンバージョンファネル
-        ========================================
-        \(report.funnelData.enumerated().map { index, step in
-            "\(index + 1). \(step.name): \(step.visitors)人 → \(step.conversions)人 (\(String(format: "%.1f", step.conversionRate))%)"
-        }.joined(separator: "\n"))
-        
-        ========================================
-        A/Bテスト結果
-        ========================================
-        \(report.abTestResults.isEmpty ? "実行中のA/Bテストはありません" : report.abTestResults.map { test in
-            "• \(test.name): \(test.status.displayName)"
-        }.joined(separator: "\n"))
-        
-        ========================================
-        ヒートマップ分析
-        ========================================
-        • 総クリック数: \(report.heatmapData.count)回
-        • 分析対象ページ: \(Set(report.heatmapData.map { $0.url }).count)ページ
-        
-        ========================================
-        レポート生成日時: \(Date().formatted(date: .complete, time: .complete))
-        ========================================
-        """
-        
-        return reportText.data(using: String.Encoding.utf8) ?? Data()
-    }
-    
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return "\(minutes)分\(seconds)秒"
-    }
-    
-    private func getPageViewCount(for url: String, in report: MonthlyReport) -> Int {
-        return report.topPages.filter { $0.url == url }.count
-    }
-    
-    private func getUniqueVisitorsForPage(_ url: String, in report: MonthlyReport) -> Int {
-        let pageViews = report.topPages.filter { $0.url == url }
-        return Set(pageViews.map { $0.sessionId }).count
     }
 }
 
-// MARK: - Supporting Views
-
-struct ReportCard: View {
-    let report: MonthlyReport
-    let onPreview: () -> Void
-    let onExport: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
+struct ReportDetailView: View {
+    let report: Report
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var reportManager: ReportManager
+    
     var body: some View {
-        let primaryColor = DesignSystem.textPrimary
-        let secondaryColor = DesignSystem.textSecondary
-        let accentColor = DesignSystem.textAccent
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Image(systemName: report.type.icon)
+                                .font(.title)
+                                .foregroundColor(DesignSystem.textAccent)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(report.title)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(DesignSystem.textPrimary)
+                                
+                                Text(report.description)
+                                    .font(.subheadline)
+                                    .foregroundColor(DesignSystem.textSecondary)
+                            }
+                            
+                            Spacer()
+                        }
+                        
+                        HStack {
+                            StatusBadge(status: report.status)
+                            Spacer()
+                            Text("生成日: \(report.createdAt.formatted())")
+                                .font(.caption)
+                                .foregroundColor(DesignSystem.textSecondary)
+                        }
+                    }
+                    .padding(DesignSystem.padding)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
+                            .fill(DesignSystem.cardBackground)
+                    )
+                    
+                    // Summary Cards
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 16) {
+                        SummaryCard(
+                            title: "ページビュー",
+                            value: "\(report.data.pageViews)",
+                            icon: "eye.fill",
+                            color: .blue
+                        )
+                        
+                        SummaryCard(
+                            title: "ユニーク訪問者",
+                            value: "\(report.data.uniqueVisitors)",
+                            icon: "person.2.fill",
+                            color: .green
+                        )
+                        
+                        SummaryCard(
+                            title: "コンバージョン",
+                            value: "\(report.data.conversions)",
+                            icon: "target",
+                            color: .purple
+                        )
+                        
+                        SummaryCard(
+                            title: "売上",
+                            value: "¥\(Int(report.data.revenue))",
+                            icon: "yensign.circle.fill",
+                            color: .orange
+                        )
+                    }
+                    
+                    // Top Pages
+                    if !report.data.topPages.isEmpty {
+                        ModernCardView {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("トップページ")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(DesignSystem.textPrimary)
+                                
+                                ForEach(Array(report.data.topPages.prefix(5).enumerated()), id: \.element.url) { index, page in
+                                    HStack {
+                                        Text("\(index + 1)")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(DesignSystem.textSecondary)
+                                            .frame(width: 20)
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(page.title)
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(DesignSystem.textPrimary)
+                                            
+                                            Text(page.url)
+                                                .font(.caption)
+                                                .foregroundColor(DesignSystem.textSecondary)
+                                                .lineLimit(1)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        VStack(alignment: .trailing, spacing: 2) {
+                                            Text("\(page.views)")
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(DesignSystem.textPrimary)
+                                            
+                                            Text("ビュー")
+                                                .font(.caption)
+                                                .foregroundColor(DesignSystem.textSecondary)
+                                        }
+                                    }
+                                    
+                                    if index < min(4, report.data.topPages.count - 1) {
+                                        Divider()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Device Breakdown
+                    if !report.data.deviceBreakdown.isEmpty {
+                        ModernCardView {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("デバイス別内訳")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(DesignSystem.textPrimary)
+                                
+                                Chart {
+                                    ForEach(report.data.deviceBreakdown, id: \.device) { device in
+                                        SectorMark(
+                                            angle: .value("セッション", device.sessions),
+                                            innerRadius: .ratio(0.6),
+                                            angularInset: 2
+                                        )
+                                        .foregroundStyle(by: .value("デバイス", device.device))
+                                    }
+                                }
+                                .frame(height: 200)
+                                .chartLegend(position: .bottom, alignment: .center)
+                            }
+                        }
+                    }
+                }
+                .padding(DesignSystem.padding)
+            }
+            .background(DesignSystem.backgroundGradient)
+            .navigationTitle("レポート詳細")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button("CSVエクスポート") {
+                            exportReport()
+                        }
+                        
+                        Button("削除", role: .destructive) {
+                            deleteReport()
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("閉じる") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func exportReport() {
+        let csv = reportManager.exportReport(report)
+        // ここでCSVファイルを保存または共有する処理を実装
+        print("CSV Export:\n\(csv)")
+    }
+    
+    private func deleteReport() {
+        reportManager.deleteReport(report)
+        dismiss()
+    }
+}
+
+struct SummaryCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
         ModernCardView {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(report.websiteName ?? "全サイト")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(primaryColor)
-                        Text(report.month, style: .date)
-                            .font(.subheadline)
-                            .foregroundColor(secondaryColor)
-                    }
+                    Image(systemName: icon)
+                        .font(.title2)
+                        .foregroundColor(color)
+                    
                     Spacer()
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("\(report.pageViews)")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(accentColor)
-                        Text("ページビュー")
-                            .font(.caption)
-                            .foregroundColor(secondaryColor)
-                    }
                 }
-                HStack(spacing: 12) {
-                    AnimatedButton(
-                        title: "プレビュー",
-                        icon: "eye",
-                        style: .secondary,
-                        action: onPreview
-                    )
-                    AnimatedButton(
-                        title: "エクスポート",
-                        icon: "square.and.arrow.up",
-                        style: .secondary,
-                        action: onExport
-                    )
-                }
-            }
-        }
-    }
-}
-
-struct ReportPreviewView: View {
-    let report: MonthlyReport
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
-    var body: some View {
-        let primaryColor = DesignSystem.textPrimary
-        let secondaryColor = DesignSystem.textSecondary
-        let cardBackground = DesignSystem.cardBackground
-        let cardBorder = DesignSystem.cardBorder
-        NavigationView {
-            ZStack {
-                DesignSystem.backgroundGradient
-                    .ignoresSafeArea()
-                ScrollView {
-                    VStack(spacing: 20) {
-                        reportHeaderView(primaryColor: primaryColor, secondaryColor: secondaryColor, cardBackground: cardBackground, cardBorder: cardBorder)
-                        keyMetricsView(primaryColor: primaryColor, cardBackground: cardBackground, cardBorder: cardBorder)
-                        topPagesView(primaryColor: primaryColor, cardBackground: cardBackground, cardBorder: cardBorder)
-                    }
-                    .padding(.horizontal, 20)
-                }
-            }
-        }
-        .navigationTitle("レポートプレビュー")
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                AnimatedButton(
-                    title: "閉じる",
-                    icon: "xmark",
-                    style: .secondary,
-                    action: {
-                        dismiss()
-                    }
-                )
-            }
-        }
-    }
-    private func reportHeaderView(primaryColor: Color, secondaryColor: Color, cardBackground: Color, cardBorder: Color) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("月次レポート")
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(primaryColor)
-            VStack(spacing: 8) {
-                InfoRow(label: "対象月", value: report.month, style: .medium)
-                InfoRow(label: "対象サイト", value: report.websiteName ?? "全サイト")
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                .fill(cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                        .stroke(cardBorder, lineWidth: 1)
-                )
-        )
-    }
-    private func keyMetricsView(primaryColor: Color, cardBackground: Color, cardBorder: Color) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("主要指標")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(primaryColor)
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 16) {
-                AnimatedMetricCard(
-                    title: "ページビュー",
-                    value: "\(report.pageViews)",
-                    subtitle: "総ページビュー数",
-                    change: "0%",
-                    isPositive: true,
-                    icon: "eye.fill",
-                    gradient: DesignSystem.primaryGradient,
-                    isLoading: false
-                )
-                AnimatedMetricCard(
-                    title: "ユニーク訪問者",
-                    value: "\(report.uniqueVisitors)",
-                    subtitle: "個別訪問者数",
-                    change: "0%",
-                    isPositive: true,
-                    icon: "person.2.fill",
-                    gradient: DesignSystem.secondaryGradient,
-                    isLoading: false
-                )
-                AnimatedMetricCard(
-                    title: "コンバージョン",
-                    value: "\(report.conversions)",
-                    subtitle: "コンバージョン数",
-                    change: "0%",
-                    isPositive: true,
-                    icon: "target",
-                    gradient: DesignSystem.accentGradient,
-                    isLoading: false
-                )
-                AnimatedMetricCard(
-                    title: "売上",
-                    value: String(format: "¥%.0f", report.totalRevenue),
-                    subtitle: "総売上",
-                    change: "0%",
-                    isPositive: true,
-                    icon: "yensign.circle.fill",
-                    gradient: DesignSystem.primaryGradient,
-                    isLoading: false
-                )
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                .fill(cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                        .stroke(cardBorder, lineWidth: 1)
-                )
-        )
-    }
-    private func topPagesView(primaryColor: Color, cardBackground: Color, cardBorder: Color) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("トップページ")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(primaryColor)
-            LazyVStack(spacing: 12) {
-                ForEach(Array(report.topPages.enumerated()), id: \.offset) { index, pageView in
-                    TopPageRow(page: PageData(
-                        url: pageView.url,
-                        views: getPageViewCount(for: pageView.url, in: report),
-                        uniqueVisitors: getUniqueVisitorsForPage(pageView.url, in: report),
-                        averageTimeOnPage: 0
-                    ))
-                }
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                .fill(cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.cornerRadius)
-                        .stroke(cardBorder, lineWidth: 1)
-                )
-        )
-    }
-    // MARK: - Helper Functions
-    
-    private func getPageViewCount(for url: String, in report: MonthlyReport) -> Int {
-        // 実際のデータからページビュー数を取得するロジック
-        // ここでは簡易的な実装として、ランダムな値を返す
-        return Int.random(in: 100...1000)
-    }
-    
-    private func getUniqueVisitorsForPage(_ url: String, in report: MonthlyReport) -> Int {
-        // 実際のデータからユニーク訪問者数を取得するロジック
-        // ここでは簡易的な実装として、ランダムな値を返す
-        return Int.random(in: 50...500)
-    }
-}
-
-struct TopPageRow: View {
-    let page: PageData
-    @Environment(\.colorScheme) private var colorScheme
-    var body: some View {
-        let primaryColor = DesignSystem.textPrimary
-        let secondaryColor = DesignSystem.textSecondary
-        let accentColor = DesignSystem.textAccent
-        let cardBackground = DesignSystem.cardBackground
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(page.url)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(primaryColor)
-                    .lineLimit(1)
-                Text("\(page.uniqueVisitors) ユニーク訪問者")
+                
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(DesignSystem.textPrimary)
+                
+                Text(title)
                     .font(.caption)
-                    .foregroundColor(secondaryColor)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("\(page.views)")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(accentColor)
-                Text("ビュー")
-                    .font(.caption)
-                    .foregroundColor(secondaryColor)
+                    .foregroundColor(DesignSystem.textSecondary)
             }
         }
-        .padding(DesignSystem.smallPadding)
-        .background(
-            RoundedRectangle(cornerRadius: DesignSystem.smallCornerRadius)
-                .fill(cardBackground.opacity(0.5))
-        )
     }
 }
 
 #Preview {
     ReportView()
         .environmentObject(ReportManager(analyticsManager: AnalyticsManager(), websiteManager: WebsiteManager()))
-        .environmentObject(WebsiteManager())
 } 
